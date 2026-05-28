@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uvicorn app.main:app *)",
+      "Bash(curl -s http://127.0.0.1:8000/)",
+      "Bash(xargs kill *)",
+      "Bash(uvicorn app.main:app --reload)",
+      "Read(//tmp/**)",
+      "Bash(curl *)",
+      "Bash(npx create-next-app@latest *)"
+    ]
+  }
+}
