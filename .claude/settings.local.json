@@ -7,7 +7,14 @@
       "Bash(uvicorn app.main:app --reload)",
       "Read(//tmp/**)",
       "Bash(curl *)",
-      "Bash(npx create-next-app@latest *)"
+      "Bash(npx create-next-app@latest *)",
+      "Bash(rm -rf frontend/.git)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)"
     ]
   }
 }
