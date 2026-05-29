@@ -10,11 +10,17 @@ export default function Home() {
   const [teams, setTeams] = useState([])
   const [homeSearch, setHomeSearch] = useState([])
   const [awaySearch, setAwaySearch] = useState([])
+  const [availableModels, setAvailableModels] = useState([])
+  const [selectedModel, setSelectedModel] = useState('logistic_regression')
 
   useEffect(() => {
     fetch('http://localhost:8000/teams')
       .then(r => r.json())
       .then(d => setTeams(d.teams))
+
+    fetch('http://localhost:8000/models')
+      .then(r => r.json())
+      .then(d => setAvailableModels(d.models))
   }, [])
 
   function filterTeams(query) {
@@ -28,7 +34,7 @@ export default function Home() {
     setResult(null)
     try {
       const response = await fetch(
-        `http://localhost:8000/predict?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}`
+        `http://localhost:8000/predict?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}&model=${selectedModel}`
       )
       const data = await response.json()
       setResult(data)
@@ -55,18 +61,46 @@ export default function Home() {
         {/* Title */}
         <div className="mb-16">
           <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-4">Match Simulator</p>
-          <h1 className="text-5xl font-bold tracking-tight leading-none mb-4">
-            Who wins?
-          </h1>
-          <p className="text-white/40 text-sm">
-            ML model trained on 45,000+ international matches
-          </p>
+          <h1 className="text-5xl font-bold tracking-tight leading-none mb-4">Who wins?</h1>
+          <p className="text-white/40 text-sm">ML model trained on 45,000+ international matches</p>
+        </div>
+
+        {/* Model Selector */}
+        <div className="mb-10">
+          <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-4">Select Model</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {availableModels.map(m => (
+              <button
+                key={m.key}
+                disabled={!m.available}
+                onClick={() => m.available && setSelectedModel(m.key)}
+                className={`
+                  relative text-left px-4 py-3 rounded border transition-all
+                  ${!m.available
+                    ? 'border-white/5 opacity-30 cursor-not-allowed'
+                    : selectedModel === m.key
+                      ? 'border-emerald-400/60 bg-emerald-400/10'
+                      : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
+                  }
+                `}
+              >
+                <p className={`text-xs font-bold tracking-wide ${selectedModel === m.key && m.available ? 'text-emerald-400' : 'text-white/70'}`}>
+                  {m.label}
+                </p>
+                <p className={`text-[10px] mt-1 tracking-widest uppercase ${m.badge === 'Coming Soon' ? 'text-white/20' : 'text-white/30'}`}>
+                  {m.badge}
+                </p>
+                {selectedModel === m.key && m.available && (
+                  <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Team Inputs */}
         <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-start mb-8">
 
-          {/* Home Team */}
           <div className="relative">
             <label className="text-white/30 text-xs tracking-widest uppercase block mb-2">Home</label>
             <input
@@ -93,10 +127,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* VS */}
           <div className="pt-8 text-white/20 text-sm tracking-widest">VS</div>
 
-          {/* Away Team */}
           <div className="relative">
             <label className="text-white/30 text-xs tracking-widest uppercase block mb-2">Away</label>
             <input
@@ -136,7 +168,6 @@ export default function Home() {
         {/* Result */}
         {result && (
           <div className="mt-12 border border-white/10 rounded-lg p-8 bg-white/[0.02]">
-
             <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-6">Prediction Output</p>
 
             <div className="mb-8">
@@ -144,7 +175,6 @@ export default function Home() {
               <p className="text-3xl font-bold text-emerald-400">{result.predicted_winner}</p>
             </div>
 
-            {/* Probability Bars */}
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-xs text-white/40 mb-2 tracking-widest uppercase">
@@ -174,7 +204,7 @@ export default function Home() {
             </div>
 
             <p className="mt-6 text-white/20 text-xs tracking-widest">
-              MODEL // Logistic Regression · 45,000+ matches
+              MODEL // {result.model_label} · 45,000+ matches
             </p>
           </div>
         )}

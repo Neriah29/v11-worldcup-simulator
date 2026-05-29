@@ -23,10 +23,15 @@ app.add_middleware(
 def home():
     return {"message": "World Cup Simulator API is running"}
 
+@app.get("/models")
+def list_models():
+    return {"models": predictor.get_models()}
+
+
 @app.get("/predict")
-def predict(home_team: str, away_team: str):
+def predict(home_team: str, away_team: str, model: str = "logistic_regression"):
     try:
-        result = predictor.predict(home_team, away_team)
+        result = predictor.predict(home_team, away_team, model)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
