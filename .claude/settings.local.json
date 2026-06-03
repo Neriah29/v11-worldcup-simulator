@@ -17,7 +17,9 @@
       "Bash(git push *)",
       "Bash(python3 *)",
       "Bash(break)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(railway status *)",
+      "Bash(railway logs *)"
     ]
   }
 }
