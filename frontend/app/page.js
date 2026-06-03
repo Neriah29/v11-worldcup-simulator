@@ -14,11 +14,11 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState('logistic_regression')
 
   useEffect(() => {
-    fetch('http://localhost:8000/teams')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams`)
       .then(r => r.json())
       .then(d => setTeams(d.teams))
 
-    fetch('http://localhost:8000/models')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/models`)
       .then(r => r.json())
       .then(d => setAvailableModels(d.models))
   }, [])
@@ -34,7 +34,7 @@ export default function Home() {
     setResult(null)
     try {
       const response = await fetch(
-        `http://localhost:8000/predict?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}&model=${selectedModel}`
+        `${process.env.NEXT_PUBLIC_API_URL}/predict?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}&model=${selectedModel}`
       )
       const data = await response.json()
       setResult(data)

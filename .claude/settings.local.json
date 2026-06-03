@@ -16,7 +16,8 @@
       "Bash(git branch *)",
       "Bash(git push *)",
       "Bash(python3 *)",
-      "Bash(break)"
+      "Bash(break)",
+      "Bash(npm install *)"
     ]
   }
 }
