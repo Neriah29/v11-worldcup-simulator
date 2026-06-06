@@ -5,9 +5,12 @@ from app import predictor
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting up — training model...")
-    predictor.train()
-    print("Model ready.")
+    if not predictor.load():
+        print("No saved models found — training from scratch...")
+        predictor.train()
+        predictor.save()
+    else:
+        print("Pre-trained models loaded successfully.")
     yield
 
 app = FastAPI(lifespan=lifespan)

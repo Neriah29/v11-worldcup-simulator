@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pickle
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -14,24 +15,73 @@ from football_ml.supervised_learning.perceptron import Perceptron
 
 DATA_PATH    = Path(__file__).parent / "data" / "results.csv"
 RANKING_PATH = Path(__file__).parent / "data" / "fifa_ranking_24.csv"
+MODELS_PATH  = Path(__file__).parent / "data" / "trained_models.pkl"
 
-# Global state
-models = {}
-scaler = None
+# ─── Global state ────────────────────────────────────────────────────────────
+models            = {}
+scaler            = None
 team_latest_stats = {}
 
-# --- UPDATED: 10 features now instead of 7 ---
+# ─── Tournament importance weights ───────────────────────────────────────────
+# Higher weight = this tournament type carries more signal.
+# A World Cup match tells us far more than a Friendly with a rotated squad.
+TOURNAMENT_WEIGHTS = {
+    "FIFA World Cup":               1.0,
+    "Confederations Cup":           0.85,
+    "UEFA Euro":                    0.85,
+    "Copa América":                 0.85,
+    "AFC Asian Cup":                0.80,
+    "Africa Cup of Nations":        0.80,
+    "CONCACAF Gold Cup":            0.75,
+    "UEFA Nations League":          0.75,
+    "FIFA World Cup qualification": 0.70,
+    "Friendly":                     0.30,
+}
+DEFAULT_TOURNAMENT_WEIGHT = 0.50
+
+# ─── Feature columns — 21 features total ─────────────────────────────────────
 FEATURE_COLS = [
+    # Rolling form stats (exponential decay weighted)
     'home_goals_rolling',
     'away_goals_rolling',
     'home_conceded_rolling',
     'away_conceded_rolling',
-    'home_win_rate',
-    'away_win_rate',
+
+    # Win rates split by home/away context
+    'home_win_rate_home',    # how often home team wins when AT HOME
+    'away_win_rate_away',    # how often away team wins when AWAY
+
+    # Neutral ground
     'neutral',
-    'rank_diff',       # NEW: home_rank - away_rank (negative = home team is better)
-    'points_diff',     # NEW: home_points - away_points (more granular than rank)
-    'same_conf',       # NEW: 1 if both teams are from the same confederation
+
+    # FIFA ranking features
+    'rank_diff',
+    'points_diff',
+    'same_conf',
+
+    # Elo ratings — single strongest signal
+    'home_elo',
+    'away_elo',
+    'elo_diff',
+
+    # Goal difference rolling (margin of victory signal)
+    'home_gd_rolling',
+    'away_gd_rolling',
+
+    # Momentum/streak
+    'home_streak',
+    'away_streak',
+
+    # Defensive quality
+    'home_clean_sheet_rate',
+    'away_clean_sheet_rate',
+
+    # Fatigue/rest
+    'home_days_rest',
+    'away_days_rest',
+
+    # Head-to-head
+    'h2h_home_win_rate',
 ]
 
 MODEL_CONFIGS = {
@@ -80,220 +130,383 @@ MODEL_CONFIGS = {
 }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ELO COMPUTATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_elo(df, k=30, initial=1500):
+    """
+    Compute Elo ratings for every team across every match in history.
+
+    How Elo works:
+    - Every team starts at 1500 (the global average)
+    - After each match, ratings update based on ACTUAL vs EXPECTED result
+    - Beat a strong team -> gain lots of points
+    - Lose to a weak team -> lose lots of points
+    - K factor (30) controls how fast ratings shift
+    - Tournament weight means World Cup matches update ratings more than Friendlies
+
+    We record each team's rating BEFORE the match so the model only
+    sees information that was available at prediction time (no leakage).
+    """
+    elo_ratings = {}
+    home_elos, away_elos = [], []
+
+    for _, row in df.iterrows():
+        home = row['home_team']
+        away = row['away_team']
+
+        if home not in elo_ratings:
+            elo_ratings[home] = initial
+        if away not in elo_ratings:
+            elo_ratings[away] = initial
+
+        r_home = elo_ratings[home]
+        r_away = elo_ratings[away]
+
+        home_elos.append(r_home)
+        away_elos.append(r_away)
+
+        # Expected home win probability (Elo logistic curve)
+        expected_home = 1 / (1 + 10 ** ((r_away - r_home) / 400))
+
+        # Actual result
+        if row['home_score'] > row['away_score']:
+            actual_home = 1.0
+        elif row['home_score'] == row['away_score']:
+            actual_home = 0.5
+        else:
+            actual_home = 0.0
+
+        # Tournament weight
+        t_weight = TOURNAMENT_WEIGHTS.get(row['tournament'], DEFAULT_TOURNAMENT_WEIGHT)
+
+        # Update — zero sum, one gains what the other loses
+        change = k * t_weight * (actual_home - expected_home)
+        elo_ratings[home] = r_home + change
+        elo_ratings[away] = r_away - change
+
+    df = df.copy()
+    df['home_elo'] = home_elos
+    df['away_elo'] = away_elos
+    df['elo_diff'] = df['home_elo'] - df['away_elo']
+
+    return df, elo_ratings
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROLLING STATS WITH EXPONENTIAL DECAY
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_rolling_stats(df, window=10):
+    """
+    Compute per-team rolling stats using exponential decay weighting.
+
+    Exponential decay: last week's match counts more than 18 months ago.
+    shift(1) ensures we only use PAST matches — no data leakage.
+
+    Stats computed:
+    - rolling goals scored/conceded (exponential decay)
+    - rolling goal difference
+    - clean sheet rate
+    - win/draw/loss streak
+    - home-specific win rate
+    - away-specific win rate
+    - days since last match (rest/fatigue)
+    """
+    home_log = df[['date', 'home_team', 'home_score', 'away_score']].copy()
+    home_log.columns = ['date', 'team', 'scored', 'conceded']
+    home_log['is_home'] = True
+
+    away_log = df[['date', 'away_team', 'away_score', 'home_score']].copy()
+    away_log.columns = ['date', 'team', 'scored', 'conceded']
+    away_log['is_home'] = False
+
+    team_log = pd.concat([home_log, away_log]).sort_values('date').reset_index(drop=True)
+    team_log['gd']          = team_log['scored'] - team_log['conceded']
+    team_log['win']         = (team_log['scored'] > team_log['conceded']).astype(int)
+    team_log['clean_sheet'] = (team_log['conceded'] == 0).astype(int)
+
+    def ewm_shift(series, span=window):
+        return series.shift(1).ewm(span=span, adjust=False).mean()
+
+    team_log['rolling_scored']   = team_log.groupby('team')['scored'].transform(ewm_shift)
+    team_log['rolling_conceded'] = team_log.groupby('team')['conceded'].transform(ewm_shift)
+    team_log['rolling_gd']       = team_log.groupby('team')['gd'].transform(ewm_shift)
+    team_log['rolling_cs_rate']  = team_log.groupby('team')['clean_sheet'].transform(ewm_shift)
+
+    # Streak: +1 per win, -1 per loss, 0 on draw (resets)
+    def compute_streak(group):
+        streak, current = [], 0
+        for _, row in group.iterrows():
+            streak.append(current)
+            if row['win'] == 1:
+                current = current + 1 if current >= 0 else 1
+            elif row['scored'] < row['conceded']:
+                current = current - 1 if current <= 0 else -1
+            else:
+                current = 0
+        return pd.Series(streak, index=group.index)
+
+    team_log['streak'] = team_log.groupby('team', group_keys=False).apply(compute_streak)
+
+    # Days rest
+    team_log['prev_date'] = team_log.groupby('team')['date'].shift(1)
+    team_log['days_rest'] = (team_log['date'] - team_log['prev_date']).dt.days.fillna(30)
+
+    # Home/away specific win rates
+    home_mask = team_log['is_home']
+    team_log['home_win_rate'] = np.nan
+    team_log['away_win_rate'] = np.nan
+    team_log.loc[home_mask,  'home_win_rate'] = (
+        team_log[home_mask].groupby('team')['win'].transform(ewm_shift)
+    )
+    team_log.loc[~home_mask, 'away_win_rate'] = (
+        team_log[~home_mask].groupby('team')['win'].transform(ewm_shift)
+    )
+    team_log['home_win_rate'] = team_log.groupby('team')['home_win_rate'].ffill()
+    team_log['away_win_rate'] = team_log.groupby('team')['away_win_rate'].ffill()
+
+    stats = team_log.drop_duplicates(subset=['date', 'team'], keep='last')
+    return stats.set_index(['date', 'team'])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HEAD-TO-HEAD WIN RATE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_h2h(df):
+    """
+    For each match, compute the home team's win rate against this
+    specific opponent across the last 10 historical meetings.
+
+    Only uses matches BEFORE the current match date — no leakage.
+    Falls back to 0.5 (neutral) when no history exists.
+    """
+    h2h_rates = []
+
+    for i, row in df.iterrows():
+        home, away, date = row['home_team'], row['away_team'], row['date']
+
+        past = df[
+            (df['date'] < date) &
+            (
+                ((df['home_team'] == home) & (df['away_team'] == away)) |
+                ((df['home_team'] == away) & (df['away_team'] == home))
+            )
+        ].tail(10)
+
+        if len(past) == 0:
+            h2h_rates.append(0.5)
+            continue
+
+        wins = sum(
+            1 for _, m in past.iterrows()
+            if (m['home_team'] == home and m['home_score'] > m['away_score']) or
+               (m['away_team'] == home and m['away_score'] > m['home_score'])
+        )
+        h2h_rates.append(wins / len(past))
+
+    return pd.Series(h2h_rates, index=df.index)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIFA RANKINGS JOIN
+# ─────────────────────────────────────────────────────────────────────────────
+
 def _load_rankings():
-    """
-    Load FIFA rankings and build a lookup structure.
-
-    The rankings file has one row per team per ranking date (quarterly snapshots).
-    For each match, we want the ranking that was active ON or BEFORE that match date.
-    We do this with a technique called an "as-of join" (also called merge_asof).
-
-    Returns a DataFrame sorted by rank_date, ready for merging.
-    """
     ranking = pd.read_csv(RANKING_PATH)
     ranking['rank_date'] = pd.to_datetime(ranking['rank_date'])
-
-    # Keep only the columns we need
     ranking = ranking[['rank_date', 'country_full', 'rank', 'total_points', 'confederation']]
-    ranking = ranking.sort_values('rank_date').reset_index(drop=True)
-    return ranking
+    return ranking.sort_values('rank_date').reset_index(drop=True)
 
 
 def _add_ranking_features(df, ranking):
-    """
-    For each match in df, look up the FIFA ranking for both teams
-    that was active on or before the match date.
-
-    Think of it like this: if a match was played on 2018-06-15,
-    we want the ranking published on 2018-06-14 or earlier — not
-    a future ranking the model couldn't have known about.
-
-    Teams with no ranking data (pre-1992 or unranked nations) get
-    NaN, which we fill with a neutral fallback later.
-    """
-    # We'll merge rankings twice — once for home team, once for away team
     results = []
-
     for _, match in df.iterrows():
-        match_date = match['date']
+        date = match['date']
 
-        # Get the most recent ranking for home team on/before match date
-        home_rows = ranking[
-            (ranking['country_full'] == match['home_team']) &
-            (ranking['rank_date'] <= match_date)
-        ]
-        away_rows = ranking[
-            (ranking['country_full'] == match['away_team']) &
-            (ranking['rank_date'] <= match_date)
-        ]
+        def get_team_ranking(team_name):
+            rows = ranking[
+                (ranking['country_full'] == team_name) &
+                (ranking['rank_date'] <= date)
+            ]
+            if rows.empty:
+                return np.nan, np.nan, None
+            latest = rows.iloc[-1]
+            return latest['rank'], latest['total_points'], latest['confederation']
 
-        if not home_rows.empty:
-            home_latest = home_rows.iloc[-1]
-            home_rank   = home_latest['rank']
-            home_points = home_latest['total_points']
-            home_conf   = home_latest['confederation']
-        else:
-            home_rank   = np.nan
-            home_points = np.nan
-            home_conf   = None
-
-        if not away_rows.empty:
-            away_latest = away_rows.iloc[-1]
-            away_rank   = away_latest['rank']
-            away_points = away_latest['total_points']
-            away_conf   = away_latest['confederation']
-        else:
-            away_rank   = np.nan
-            away_points = np.nan
-            away_conf   = None
+        h_rank, h_pts, h_conf = get_team_ranking(match['home_team'])
+        a_rank, a_pts, a_conf = get_team_ranking(match['away_team'])
 
         results.append({
-            'home_rank':   home_rank,
-            'home_points': home_points,
-            'home_conf':   home_conf,
-            'away_rank':   away_rank,
-            'away_points': away_points,
-            'away_conf':   away_conf,
+            'home_rank': h_rank, 'home_points': h_pts, 'home_conf': h_conf,
+            'away_rank': a_rank, 'away_points': a_pts, 'away_conf': a_conf,
         })
 
     rank_df = pd.DataFrame(results, index=df.index)
     df = pd.concat([df, rank_df], axis=1)
 
-    # --- Compute the three new features ---
-
-    # rank_diff: positive means home team is WORSE ranked (higher number = worse)
-    # negative means home team is BETTER ranked
     df['rank_diff']   = df['home_rank'] - df['away_rank']
-
-    # points_diff: positive means home team has MORE points (better)
     df['points_diff'] = df['home_points'] - df['away_points']
-
-    # same_conf: 1 if both teams are from the same confederation
-    # e.g. Germany vs France = 1 (both UEFA), Brazil vs Argentina = 1 (both CONMEBOL)
-    # Brazil vs Germany = 0 (CONMEBOL vs UEFA)
-    df['same_conf'] = (
-        (df['home_conf'].notna()) &
-        (df['away_conf'].notna()) &
+    df['same_conf']   = (
+        df['home_conf'].notna() & df['away_conf'].notna() &
         (df['home_conf'] == df['away_conf'])
     ).astype(int)
 
-    return df
+    df['rank_diff']   = df['rank_diff'].fillna(df['rank_diff'].median())
+    df['points_diff'] = df['points_diff'].fillna(df['points_diff'].median())
 
+    ranking_lookup = {
+        row['country_full']: {
+            'rank': row['rank'], 'points': row['total_points'], 'conf': row['confederation']
+        }
+        for _, row in ranking.drop_duplicates('country_full', keep='last').iterrows()
+    }
+    return df, ranking_lookup
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERSISTENCE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def save(path: Path = MODELS_PATH):
+    """Save trained models, scaler, and team stats to disk."""
+    with open(path, "wb") as f:
+        pickle.dump({
+            "models":            models,
+            "scaler":            scaler,
+            "team_latest_stats": team_latest_stats,
+        }, f)
+    print(f"Saved to {path}")
+
+
+def load(path: Path = MODELS_PATH) -> bool:
+    """Load pre-trained models from disk. Returns True if successful."""
+    global models, scaler, team_latest_stats
+    if not path.exists():
+        return False
+    with open(path, "rb") as f:
+        payload = pickle.load(f)
+    models            = payload["models"]
+    scaler            = payload["scaler"]
+    team_latest_stats = payload["team_latest_stats"]
+    print(f"Loaded pre-trained models. {len(team_latest_stats)} teams available.")
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TRAIN
+# ─────────────────────────────────────────────────────────────────────────────
 
 def train():
     global models, scaler, team_latest_stats
 
-    # 1. Load match data
+    print("Loading match data...")
     df = pd.read_csv(DATA_PATH)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
     df['home_win'] = (df['home_score'] > df['away_score']).astype(int)
+    df['neutral']  = df['neutral'].astype(int)
 
-    # 2. Load rankings
-    print("Loading FIFA rankings...")
-    ranking = _load_rankings()
+    print("Computing Elo ratings...")
+    df, final_elo = _compute_elo(df)
 
-    # 3. Rolling stats (same as before)
-    def compute_team_rolling_stats(df, window=10):
-        home_log = df[['date', 'home_team', 'home_score', 'away_score']].copy()
-        home_log.columns = ['date', 'team', 'scored', 'conceded']
-        away_log = df[['date', 'away_team', 'away_score', 'home_score']].copy()
-        away_log.columns = ['date', 'team', 'scored', 'conceded']
-        team_log = pd.concat([home_log, away_log]).sort_values('date').reset_index(drop=True)
-        team_log['rolling_scored'] = (
-            team_log.groupby('team')['scored']
-            .transform(lambda x: x.shift(1).rolling(window, min_periods=1).mean())
-        )
-        team_log['rolling_conceded'] = (
-            team_log.groupby('team')['conceded']
-            .transform(lambda x: x.shift(1).rolling(window, min_periods=1).mean())
-        )
-        return team_log.drop_duplicates(subset=['date', 'team'], keep='last').set_index(['date', 'team'])
+    print("Computing rolling stats...")
+    team_stats = _compute_rolling_stats(df)
 
-    team_stats = compute_team_rolling_stats(df)
-
-    def get_stat(row, team_col, stat_col):
+    def get_stat(row, team_col, stat):
         try:
-            return team_stats.loc[(row['date'], row[team_col]), stat_col]
+            return team_stats.loc[(row['date'], row[team_col]), stat]
         except KeyError:
             return np.nan
 
-    df['home_goals_rolling']    = df.apply(lambda r: get_stat(r, 'home_team', 'rolling_scored'), axis=1)
-    df['home_conceded_rolling'] = df.apply(lambda r: get_stat(r, 'home_team', 'rolling_conceded'), axis=1)
-    df['away_goals_rolling']    = df.apply(lambda r: get_stat(r, 'away_team', 'rolling_scored'), axis=1)
-    df['away_conceded_rolling'] = df.apply(lambda r: get_stat(r, 'away_team', 'rolling_conceded'), axis=1)
+    stat_map = [
+        ('home_goals_rolling',    'home_team', 'rolling_scored'),
+        ('home_conceded_rolling', 'home_team', 'rolling_conceded'),
+        ('home_gd_rolling',       'home_team', 'rolling_gd'),
+        ('home_clean_sheet_rate', 'home_team', 'rolling_cs_rate'),
+        ('home_streak',           'home_team', 'streak'),
+        ('home_days_rest',        'home_team', 'days_rest'),
+        ('home_win_rate_home',    'home_team', 'home_win_rate'),
+        ('away_goals_rolling',    'away_team', 'rolling_scored'),
+        ('away_conceded_rolling', 'away_team', 'rolling_conceded'),
+        ('away_gd_rolling',       'away_team', 'rolling_gd'),
+        ('away_clean_sheet_rate', 'away_team', 'rolling_cs_rate'),
+        ('away_streak',           'away_team', 'streak'),
+        ('away_days_rest',        'away_team', 'days_rest'),
+        ('away_win_rate_away',    'away_team', 'away_win_rate'),
+    ]
 
-    home_wins = df.groupby('home_team').apply(
-        lambda g: (g['home_score'] > g['away_score']).mean()
-    ).rename('home_win_rate')
-    away_wins = df.groupby('away_team').apply(
-        lambda g: (g['away_score'] > g['home_score']).mean()
-    ).rename('away_win_rate')
-    df = df.join(home_wins, on='home_team').join(away_wins, on='away_team')
-    df['neutral'] = df['neutral'].astype(int)
+    for col, team_col, stat in stat_map:
+        df[col] = df.apply(lambda r: get_stat(r, team_col, stat), axis=1)
 
-    # 4. Add ranking features
-    print("Joining ranking data to matches...")
-    df = _add_ranking_features(df, ranking)
+    print("Computing head-to-head records...")
+    df['h2h_home_win_rate'] = _compute_h2h(df)
 
-    # 5. Fill NaN ranking values for pre-1992 matches
-    # We use the median rank/points as a neutral fallback so those rows
-    # still contribute to training, just without ranking signal
-    median_rank   = df['rank_diff'].median()
-    median_points = df['points_diff'].median()
-    df['rank_diff']   = df['rank_diff'].fillna(median_rank)
-    df['points_diff'] = df['points_diff'].fillna(median_points)
-    # same_conf is already 0 for unranked teams (handled above)
+    print("Joining FIFA rankings...")
+    df, ranking_lookup = _add_ranking_features(df, _load_rankings())
 
-    # 6. Save team latest stats (now includes ranking info)
+    print("Building team stats lookup...")
     df_clean = df[FEATURE_COLS + ['home_win', 'home_team', 'away_team',
                                    'home_rank', 'home_points', 'home_conf',
                                    'away_rank', 'away_points', 'away_conf']].dropna(
-        subset=['home_goals_rolling', 'away_goals_rolling',
-                'home_conceded_rolling', 'away_conceded_rolling']
+        subset=FEATURE_COLS
     )
 
     for _, row in df_clean.iterrows():
-        team_latest_stats[row['home_team']] = {
-            'goals_rolling':    row['home_goals_rolling'],
-            'conceded_rolling': row['home_conceded_rolling'],
-            'win_rate':         row['home_win_rate'],
-            'rank':             row['home_rank'],
-            'points':           row['home_points'],
-            'conf':             row['home_conf'],
-        }
-        team_latest_stats[row['away_team']] = {
-            'goals_rolling':    row['away_goals_rolling'],
-            'conceded_rolling': row['away_conceded_rolling'],
-            'win_rate':         row['away_win_rate'],
-            'rank':             row['away_rank'],
-            'points':           row['away_points'],
-            'conf':             row['away_conf'],
-        }
+        for side, prefix in [('home_team', 'home'), ('away_team', 'away')]:
+            team = row[side]
+            team_latest_stats[team] = {
+                'goals_rolling':    row[f'{prefix}_goals_rolling'],
+                'conceded_rolling': row[f'{prefix}_conceded_rolling'],
+                'gd_rolling':       row[f'{prefix}_gd_rolling'],
+                'clean_sheet_rate': row[f'{prefix}_clean_sheet_rate'],
+                'streak':           row[f'{prefix}_streak'],
+                'days_rest':        row[f'{prefix}_days_rest'],
+                'win_rate_home':    row['home_win_rate_home'] if prefix == 'home' else row.get('home_win_rate_home', 0.5),
+                'win_rate_away':    row.get('away_win_rate_away', 0.5) if prefix == 'home' else row['away_win_rate_away'],
+                'elo':              final_elo.get(team, 1500),
+                'rank':             row.get(f'{prefix}_rank',   np.nan),
+                'points':           row.get(f'{prefix}_points', np.nan),
+                'conf':             row.get(f'{prefix}_conf',   None),
+            }
 
-    # 7. Prepare training data
+    df['home_days_rest'] = df['home_days_rest'].clip(upper=90)
+    df['away_days_rest'] = df['away_days_rest'].clip(upper=90)
+    df['points_diff']    = df['points_diff'].clip(lower=-500, upper=500)
+
     X = df_clean[FEATURE_COLS].values
     y = df_clean['home_win'].values
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    scaler = StandardScaler()
+    scaler     = StandardScaler()
     X_train_sc = scaler.fit_transform(X_train)
+    X_test_sc  = scaler.transform(X_test)
 
-    # 8. Train available models
+    print("\nTraining models...")
+    accuracies = {}
     for key, config in MODEL_CONFIGS.items():
         if not config["available"]:
-            print(f"Skipping {config['label']} (coming soon)")
+            print(f"  Skipping {config['label']} (coming soon)")
             continue
-        print(f"Training {config['label']}...")
+        print(f"  Training {config['label']}...")
         m = config['instance']()
         m.fit(X_train_sc, y_train)
         models[key] = m
-        print(f"  ✓ {config['label']} ready")
+        acc = float(np.mean(m.predict(X_test_sc) == y_test))
+        accuracies[key] = acc
+        print(f"    ✓ {config['label']} — test accuracy: {acc:.3f}")
 
     print(f"\nAll models trained. {len(team_latest_stats)} teams available.")
+    print("\nAccuracy ranking:")
+    for key, acc in sorted(accuracies.items(), key=lambda x: -x[1]):
+        print(f"  {MODEL_CONFIGS[key]['label']}: {acc:.3f}")
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PREDICT
+# ─────────────────────────────────────────────────────────────────────────────
 
 def predict(home_team: str, away_team: str, model_key: str = "logistic_regression"):
     if home_team not in team_latest_stats:
@@ -306,58 +519,72 @@ def predict(home_team: str, away_team: str, model_key: str = "logistic_regressio
     h = team_latest_stats[home_team]
     a = team_latest_stats[away_team]
 
-    # Compute ranking features at prediction time
-    h_rank   = h.get('rank',   np.nan)
-    a_rank   = a.get('rank',   np.nan)
-    h_points = h.get('points', np.nan)
-    a_points = a.get('points', np.nan)
-    h_conf   = h.get('conf',   None)
-    a_conf   = a.get('conf',   None)
+    h_rank, a_rank     = h.get('rank', np.nan),   a.get('rank', np.nan)
+    h_pts,  a_pts      = h.get('points', np.nan), a.get('points', np.nan)
+    h_conf, a_conf     = h.get('conf', None),     a.get('conf', None)
+    h_elo,  a_elo      = h.get('elo', 1500),      a.get('elo', 1500)
 
-    rank_diff   = (h_rank - a_rank)     if not (np.isnan(h_rank)   or np.isnan(a_rank))   else 0.0
-    points_diff = (h_points - a_points) if not (np.isnan(h_points) or np.isnan(a_points)) else 0.0
+    h_days_rest = min(h.get('days_rest', 30), 90)
+    a_days_rest = min(a.get('days_rest', 30), 90)
+    h_pts  = np.clip(h.get('points', np.nan), -500, 500) if not np.isnan(h.get('points', np.nan)) else np.nan
+    a_pts  = np.clip(a.get('points', np.nan), -500, 500) if not np.isnan(a.get('points', np.nan)) else np.nan
+
+    rank_diff   = (h_rank - a_rank) if not (np.isnan(h_rank) or np.isnan(a_rank)) else 0.0
+    points_diff = (h_pts  - a_pts)  if not (np.isnan(h_pts)  or np.isnan(a_pts))  else 0.0
     same_conf   = 1 if (h_conf and a_conf and h_conf == a_conf) else 0
+    elo_diff    = h_elo - a_elo
 
     features = np.array([[
         h['goals_rolling'],
         a['goals_rolling'],
         h['conceded_rolling'],
         a['conceded_rolling'],
-        h['win_rate'],
-        a['win_rate'],
-        0,            # neutral — hardcoded for now, toggle coming soon
+        h.get('win_rate_home', 0.5),
+        a.get('win_rate_away', 0.5),
+        0,                              # neutral — toggle coming soon
         rank_diff,
         points_diff,
         same_conf,
+        h_elo,
+        a_elo,
+        elo_diff,
+        h.get('gd_rolling', 0),
+        a.get('gd_rolling', 0),
+        h.get('streak', 0),
+        a.get('streak', 0),
+        h.get('clean_sheet_rate', 0),
+        a.get('clean_sheet_rate', 0),
+        h_days_rest,
+        a_days_rest,
+        0.5,                            # h2h_home_win_rate — fallback, no h2h lookup at predict time
     ]])
 
     features_scaled = scaler.transform(features)
-    model = models[model_key]
+    model           = models[model_key]
 
     if model_key == "perceptron":
-        pred = model.predict(features_scaled)[0]
-        prob = float(pred)
+        prob = float(model.predict(features_scaled)[0])
     else:
-        prob = float(model.predict_proba(features_scaled)[0])
+        prob = float(np.clip(model.predict_proba(features_scaled)[0], 0.02, 0.98))
 
     return {
-        "home_team": home_team,
-        "away_team": away_team,
-        "model": model_key,
-        "model_label": MODEL_CONFIGS[model_key]["label"],
+        "home_team":            home_team,
+        "away_team":            away_team,
+        "model":                model_key,
+        "model_label":          MODEL_CONFIGS[model_key]["label"],
         "home_win_probability": round(prob, 3),
         "away_win_probability": round(1 - prob, 3),
-        "predicted_winner": home_team if prob > 0.5 else away_team
+        "predicted_winner":     home_team if prob > 0.5 else away_team,
     }
 
 
 def get_models():
     return [
         {
-            "key": key,
-            "label": config["label"],
-            "badge": config["badge"],
-            "available": config["available"]
+            "key":       key,
+            "label":     config["label"],
+            "badge":     config["badge"],
+            "available": config["available"],
         }
         for key, config in MODEL_CONFIGS.items()
     ]
