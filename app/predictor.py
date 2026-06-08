@@ -93,25 +93,25 @@ MODEL_CONFIGS = {
     },
     "knn": {
         "label": "K-Nearest Neighbors",
-        "badge": "Classic",
+        "badge": "",
         "available": True,
         "instance": lambda: KNNClassifier(k=10)
     },
     "decision_tree": {
         "label": "Decision Tree",
-        "badge": "Interpretable",
+        "badge": "",
         "available": True,
         "instance": lambda: DecisionTreeClassifier()
     },
     "naive_bayes": {
         "label": "Naive Bayes",
-        "badge": "Fastest",
+        "badge": "",
         "available": True,
         "instance": lambda: GaussianNaiveBayes()
     },
     "perceptron": {
         "label": "Perceptron",
-        "badge": "Foundational",
+        "badge": "",
         "available": True,
         "instance": lambda: Perceptron()
     },
