@@ -12,6 +12,7 @@ export default function Home() {
   const [awaySearch, setAwaySearch] = useState([])
   const [availableModels, setAvailableModels] = useState([])
   const [selectedModel, setSelectedModel] = useState('logistic_regression')
+  const [showAccuracy, setShowAccuracy] = useState(false)
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams`)
@@ -44,6 +45,14 @@ export default function Home() {
     setLoading(false)
   }
 
+  const MODEL_ACCURACY = {
+    logistic_regression: 69.3,
+    naive_bayes: 68.5,
+    knn: 65.6,
+    perceptron: 62.1,
+    decision_tree: 59.7,
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0a0f] text-white font-mono">
 
@@ -67,7 +76,36 @@ export default function Home() {
 
         {/* Model Selector */}
         <div className="mb-10">
-          <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-4">Select Model</p>
+          <div className="flex items-center gap-2 mb-4">
+            <p className="text-white/30 text-xs tracking-[0.4em] uppercase">Select Model</p>
+            <button
+              onClick={() => setShowAccuracy(!showAccuracy)}
+              className="w-4 h-4 rounded-full border border-white/20 text-white/30 text-[10px] flex items-center justify-center hover:border-white/40 hover:text-white/50 transition-colors"
+            >
+              i
+            </button>
+          </div>
+          {showAccuracy && (
+            <div className="mb-4 border border-white/10 rounded p-4 bg-white/[0.02]">
+              <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">How accurate are the models?</p>
+              <div className="space-y-2">
+                {availableModels.filter(m => m.available).map(m => (
+                  <div key={m.key} className="flex items-center gap-3">
+                    <span className="text-white/40 text-xs w-36 truncate">{m.label}</span>
+                    <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-400/60 rounded-full"
+                        style={{ width: `${MODEL_ACCURACY[m.key] || 0}%` }}
+                      />
+                    </div>
+                    <span className="text-white/40 text-xs w-10 text-right">
+                      {MODEL_ACCURACY[m.key] ? `${MODEL_ACCURACY[m.key]}%` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {availableModels.map(m => (
               <button
@@ -87,9 +125,11 @@ export default function Home() {
                 <p className={`text-xs font-bold tracking-wide ${selectedModel === m.key && m.available ? 'text-emerald-400' : 'text-white/70'}`}>
                   {m.label}
                 </p>
-                <p className={`text-[10px] mt-1 tracking-widest uppercase ${m.badge === 'Coming Soon' ? 'text-white/20' : 'text-white/30'}`}>
-                  {m.badge}
-                </p>
+                {m.badge && (
+                  <p className={`text-[10px] mt-1 tracking-widest uppercase ${m.badge === 'Coming Soon' ? 'text-white/20' : 'text-white/30'}`}>
+                    {m.badge}
+                  </p>
+                )}
                 {selectedModel === m.key && m.available && (
                   <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 )}
