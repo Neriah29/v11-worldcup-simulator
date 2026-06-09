@@ -76,36 +76,20 @@ export default function Home() {
 
         {/* Model Selector */}
         <div className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-3 mb-4">
             <p className="text-white/30 text-xs tracking-[0.4em] uppercase">Select Model</p>
+            <span className="text-white/10">|</span>
             <button
               onClick={() => setShowAccuracy(!showAccuracy)}
-              className="w-4 h-4 rounded-full border border-white/20 text-white/30 text-[10px] flex items-center justify-center hover:border-white/40 hover:text-white/50 transition-colors"
+              className={`text-[10px] tracking-[0.3em] uppercase px-2.5 py-1 rounded-full border transition-all ${
+                showAccuracy
+                  ? 'border-white/20 text-white/50 bg-white/[0.06]'
+                  : 'border-white/10 text-white/30 bg-white/[0.02] hover:border-white/20 hover:text-white/50'
+              }`}
             >
-              i
+              {showAccuracy ? 'Hide accuracy ▴' : 'How accurate is each model? ▾'}
             </button>
           </div>
-          {showAccuracy && (
-            <div className="mb-4 border border-white/10 rounded p-4 bg-white/[0.02]">
-              <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">How accurate are the models?</p>
-              <div className="space-y-2">
-                {availableModels.filter(m => m.available).map(m => (
-                  <div key={m.key} className="flex items-center gap-3">
-                    <span className="text-white/40 text-xs w-36 truncate">{m.label}</span>
-                    <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-400/60 rounded-full"
-                        style={{ width: `${MODEL_ACCURACY[m.key] || 0}%` }}
-                      />
-                    </div>
-                    <span className="text-white/40 text-xs w-10 text-right">
-                      {MODEL_ACCURACY[m.key] ? `${MODEL_ACCURACY[m.key]}%` : '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {availableModels.map(m => (
               <button
@@ -136,6 +120,35 @@ export default function Home() {
               </button>
             ))}
           </div>
+
+          {showAccuracy && (
+            <div className="mt-2 border border-white/10 rounded p-4 bg-white/[0.02]">
+              <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase mb-4">
+                Based on tests conducted during model training — accuracy reflects performance on held-out match data
+              </p>
+              <div className="space-y-3">
+                {availableModels
+                  .filter(m => m.available)
+                  .sort((a, b) => (MODEL_ACCURACY[b.key] || 0) - (MODEL_ACCURACY[a.key] || 0))
+                  .map((m, i) => (
+                    <div key={m.key} className="flex items-center gap-3">
+                      <span className="text-white/20 text-[10px] w-4">{i + 1}</span>
+                      <span className="text-white/50 text-xs w-36 truncate">{m.label}</span>
+                      <div className="flex-1 h-px bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-400/40 rounded-full"
+                          style={{ width: `${MODEL_ACCURACY[m.key] || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-white/40 text-xs w-10 text-right">
+                        {MODEL_ACCURACY[m.key] ? `${MODEL_ACCURACY[m.key]}%` : '—'}
+                      </span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Team Inputs */}
@@ -223,7 +236,7 @@ export default function Home() {
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-400 rounded-full transition-all duration-700"
+                    className={`h-full rounded-full transition-all duration-700 ${result.home_win_probability >= result.away_win_probability ? 'bg-emerald-400' : 'bg-white/40'}`}
                     style={{ width: `${result.home_win_probability * 100}%` }}
                   />
                 </div>
@@ -236,7 +249,7 @@ export default function Home() {
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-white/40 rounded-full transition-all duration-700"
+                    className={`h-full rounded-full transition-all duration-700 ${result.away_win_probability > result.home_win_probability ? 'bg-emerald-400' : 'bg-white/40'}`}
                     style={{ width: `${result.away_win_probability * 100}%` }}
                   />
                 </div>
