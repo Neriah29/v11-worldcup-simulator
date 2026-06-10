@@ -448,29 +448,52 @@ def train():
     df, ranking_lookup = _add_ranking_features(df, _load_rankings())
 
     print("Building team stats lookup...")
-    df_clean = df[FEATURE_COLS + ['home_win', 'home_team', 'away_team',
+    df_clean = df[FEATURE_COLS + ['date', 'home_win', 'home_team', 'away_team',
                                    'home_rank', 'home_points', 'home_conf',
                                    'away_rank', 'away_points', 'away_conf']].dropna(
         subset=FEATURE_COLS
     )
 
-    for _, row in df_clean.iterrows():
-        for side, prefix in [('home_team', 'home'), ('away_team', 'away')]:
-            team = row[side]
-            team_latest_stats[team] = {
-                'goals_rolling':    row[f'{prefix}_goals_rolling'],
-                'conceded_rolling': row[f'{prefix}_conceded_rolling'],
-                'gd_rolling':       row[f'{prefix}_gd_rolling'],
-                'clean_sheet_rate': row[f'{prefix}_clean_sheet_rate'],
-                'streak':           row[f'{prefix}_streak'],
-                'days_rest':        row[f'{prefix}_days_rest'],
-                'win_rate_home':    row['home_win_rate_home'] if prefix == 'home' else row.get('home_win_rate_home', 0.5),
-                'win_rate_away':    row.get('away_win_rate_away', 0.5) if prefix == 'home' else row['away_win_rate_away'],
-                'elo':              final_elo.get(team, 1500),
-                'rank':             row.get(f'{prefix}_rank',   np.nan),
-                'points':           row.get(f'{prefix}_points', np.nan),
-                'conf':             row.get(f'{prefix}_conf',   None),
-            }
+    # Build home stats from most recent home appearance per team
+    home_df = df_clean.sort_values('date').drop_duplicates('home_team', keep='last')
+    for _, row in home_df.iterrows():
+        team = row['home_team']
+        if team not in team_latest_stats:
+            team_latest_stats[team] = {}
+        team_latest_stats[team].update({
+            'goals_rolling':    row['home_goals_rolling'],
+            'conceded_rolling': row['home_conceded_rolling'],
+            'gd_rolling':       row['home_gd_rolling'],
+            'clean_sheet_rate': row['home_clean_sheet_rate'],
+            'streak':           row['home_streak'],
+            'days_rest':        row['home_days_rest'],
+            'win_rate_home':    row['home_win_rate_home'],
+            'elo':              final_elo.get(team, 1500),
+            'rank':             row.get('home_rank',   np.nan),
+            'points':           row.get('home_points', np.nan),
+            'conf':             row.get('home_conf',   None),
+        })
+
+    # Fill in away-specific stats from most recent away appearance
+    away_df = df_clean.sort_values('date').drop_duplicates('away_team', keep='last')
+    for _, row in away_df.iterrows():
+        team = row['away_team']
+        if team not in team_latest_stats:
+            team_latest_stats[team] = {}
+        team_latest_stats[team].update({
+            'win_rate_away': row['away_win_rate_away'],
+        })
+        # Fill in any missing keys for teams that only appear as away
+        team_latest_stats[team].setdefault('goals_rolling',    row['away_goals_rolling'])
+        team_latest_stats[team].setdefault('conceded_rolling', row['away_conceded_rolling'])
+        team_latest_stats[team].setdefault('gd_rolling',       row['away_gd_rolling'])
+        team_latest_stats[team].setdefault('clean_sheet_rate', row['away_clean_sheet_rate'])
+        team_latest_stats[team].setdefault('streak',           row['away_streak'])
+        team_latest_stats[team].setdefault('days_rest',        row['away_days_rest'])
+        team_latest_stats[team].setdefault('elo',              final_elo.get(team, 1500))
+        team_latest_stats[team].setdefault('rank',             row.get('away_rank',   np.nan))
+        team_latest_stats[team].setdefault('points',           row.get('away_points', np.nan))
+        team_latest_stats[team].setdefault('conf',             row.get('away_conf',   None))
 
     df['home_days_rest'] = df['home_days_rest'].clip(upper=90)
     df['away_days_rest'] = df['away_days_rest'].clip(upper=90)

@@ -37,6 +37,7 @@ def list_models():
 
 @app.get("/predict")
 def predict(home_team: str, away_team: str, model: str = "logistic_regression", neutral: int = 0):
+    print(f"Predict called: {home_team} vs {away_team}, neutral={neutral}")
     try:
         result = predictor.predict(home_team, away_team, model, neutral)
         return result
