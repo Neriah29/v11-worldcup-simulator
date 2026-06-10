@@ -508,7 +508,7 @@ def train():
 # PREDICT
 # ─────────────────────────────────────────────────────────────────────────────
 
-def predict(home_team: str, away_team: str, model_key: str = "logistic_regression"):
+def predict(home_team: str, away_team: str, model_key: str = "logistic_regression", neutral: int = 0):
     if home_team not in team_latest_stats:
         raise ValueError(f"Unknown team: {home_team}")
     if away_team not in team_latest_stats:
@@ -541,7 +541,7 @@ def predict(home_team: str, away_team: str, model_key: str = "logistic_regressio
         a['conceded_rolling'],
         h.get('win_rate_home', 0.5),
         a.get('win_rate_away', 0.5),
-        0,                              # neutral — toggle coming soon
+        neutral,
         rank_diff,
         points_diff,
         same_conf,

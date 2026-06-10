@@ -13,6 +13,7 @@ export default function Home() {
   const [availableModels, setAvailableModels] = useState([])
   const [selectedModel, setSelectedModel] = useState('logistic_regression')
   const [showAccuracy, setShowAccuracy] = useState(false)
+  const [isNeutral, setIsNeutral] = useState(false)
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams`)
@@ -35,7 +36,7 @@ export default function Home() {
     setResult(null)
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/predict?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}&model=${selectedModel}`
+        `${process.env.NEXT_PUBLIC_API_URL}/predict?home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}&model=${selectedModel}&neutral=${isNeutral ? 1 : 0}`
       )
       const data = await response.json()
       setResult(data)
@@ -149,6 +150,26 @@ export default function Home() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* World Cup Mode Toggle */}
+        <div className="flex items-center justify-between mb-8 px-1">
+          <div>
+            <p className="text-white/50 text-xs font-bold tracking-wide">World Cup Mode</p>
+            <p className="text-white/20 text-[10px] tracking-widest uppercase mt-0.5">Neutral venue — no home advantage</p>
+          </div>
+          <button
+            onClick={() => setIsNeutral(!isNeutral)}
+            className={`
+              relative w-10 h-5 rounded-full transition-colors duration-200
+              ${isNeutral ? 'bg-emerald-400' : 'bg-white/10'}
+            `}
+          >
+            <div className={`
+              absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200
+              ${isNeutral ? 'translate-x-5' : 'translate-x-0.5'}
+            `} />
+          </button>
         </div>
 
         {/* Team Inputs */}

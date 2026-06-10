@@ -35,9 +35,9 @@ def list_models():
 
 
 @app.get("/predict")
-def predict(home_team: str, away_team: str, model: str = "logistic_regression"):
+def predict(home_team: str, away_team: str, model: str = "logistic_regression", neutral: int = 0):
     try:
-        result = predictor.predict(home_team, away_team, model)
+        result = predictor.predict(home_team, away_team, model, neutral)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
