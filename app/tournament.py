@@ -123,8 +123,8 @@ def _defense_factor(team_display: str) -> float:
 
 def _match_xg(team_a: str, team_b: str) -> tuple[float, float]:
     """Return (xg_a, xg_b) for a neutral-venue match."""
-    xg_a = float(np.clip(_xg(team_a) / _defense_factor(team_b), 0.3, 4.5))
-    xg_b = float(np.clip(_xg(team_b) / _defense_factor(team_a), 0.3, 4.5))
+    xg_a = float(np.clip(_xg(team_a) * _defense_factor(team_b), 0.3, 4.5))
+    xg_b = float(np.clip(_xg(team_b) * _defense_factor(team_a), 0.3, 4.5))
     return xg_a, xg_b
 
 
