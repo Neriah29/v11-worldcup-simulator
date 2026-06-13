@@ -44,6 +44,73 @@ const COLS = {
 }
 
 // ---------------------------------------------------------------------------
+// Connector geometry
+//
+// LABEL_H: approximate height of the column label element (text-[9px] ≈ 14px
+//          line-height + mb-3 = 12px → 26px total).
+//
+// ctr(offset, gap, i) gives the vertical centre of card i in a column whose
+// flex stack starts at `offset` px below the label, with `gap` px between cards.
+//
+// Card centres verified: midpoint of each adjacent pair equals the destination
+// centre in the next round.
+// ---------------------------------------------------------------------------
+
+const LABEL_H = 26
+const CARD_H  = 56
+const CONN_W  = 16   // width of each connector SVG (replaces the column gap)
+const SVG_H   = 540  // tall enough to cover all 8 R32 cards + padding
+
+function ctr(offset, gap, i) {
+  return LABEL_H + offset + i * (CARD_H + gap) + CARD_H / 2
+}
+
+const Y = {
+  r32: [0,1,2,3,4,5,6,7].map(i => ctr(0,   8,   i)),  // 54,118,182,246,310,374,438,502
+  r16: [0,1,2,3]        .map(i => ctr(32,  72,  i)),  // 86,214,342,470
+  qf:  [0,1]            .map(i => ctr(96,  200, i)),  // 150,406
+  sf:                         ctr(224, 0,   0),        // 278
+}
+
+// Pairs: each {s1, s2} are the two source card centres that merge into {d}
+const PAIRS = {
+  r32_r16: [[0,1],[2,3],[4,5],[6,7]].map(([a,b], i) => ({ s1: Y.r32[a], s2: Y.r32[b], d: Y.r16[i] })),
+  r16_qf:  [[0,1],[2,3]]            .map(([a,b], i) => ({ s1: Y.r16[a], s2: Y.r16[b], d: Y.qf[i]  })),
+  qf_sf:   [{ s1: Y.qf[0], s2: Y.qf[1], d: Y.sf }],
+}
+
+const LINE = 'rgba(255,255,255,0.12)'
+
+// Connector SVG between two rounds.
+// dir="left"  → sources exit from x=0 (left edge), destination enters at x=W (right edge)
+// dir="right" → sources exit from x=W (right edge), destination enters at x=0 (left edge)
+function Conn({ pairs, dir = 'left' }) {
+  const half = CONN_W / 2
+  const [fromX, toX] = dir === 'right' ? [CONN_W, 0] : [0, CONN_W]
+  return (
+    <svg width={CONN_W} height={SVG_H} className="flex-shrink-0" style={{ overflow: 'visible' }}>
+      {pairs.map(({ s1, s2, d }, i) => (
+        <g key={i} stroke={LINE} strokeWidth="1" fill="none">
+          <line x1={fromX} y1={s1} x2={half}  y2={s1} />
+          <line x1={fromX} y1={s2} x2={half}  y2={s2} />
+          <line x1={half}  y1={s1} x2={half}  y2={s2} />
+          <line x1={half}  y1={d}  x2={toX}   y2={d}  />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+// Straight horizontal connector between SF and Final (same y on both sides)
+function StraightConn() {
+  return (
+    <svg width={CONN_W} height={SVG_H} className="flex-shrink-0" style={{ overflow: 'visible' }}>
+      <line x1={0} y1={Y.sf} x2={CONN_W} y2={Y.sf} stroke={LINE} strokeWidth="1" />
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Primitives
 // ---------------------------------------------------------------------------
 
@@ -151,7 +218,7 @@ export default function Bracket({ data, revealedRounds }) {
   const finalRevealed = (rv.final ?? 0) > 0
 
   return (
-    <div className="flex items-start gap-3 px-4 pb-8 select-none">
+    <div className="flex items-start gap-0 px-4 pb-8 select-none">
 
       {/* ── Left half ── */}
       <Column
@@ -161,6 +228,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.r32.offset}
         gap={COLS.r32.gap}
       />
+      <Conn pairs={PAIRS.r32_r16} dir="left" />
       <Column
         label="Round of 16"
         matches={build(LEFT.r16, 'r16')}
@@ -168,6 +236,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.r16.offset}
         gap={COLS.r16.gap}
       />
+      <Conn pairs={PAIRS.r16_qf} dir="left" />
       <Column
         label="Quarters"
         matches={build(LEFT.qf, 'qf')}
@@ -175,6 +244,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.qf.offset}
         gap={COLS.qf.gap}
       />
+      <Conn pairs={PAIRS.qf_sf} dir="left" />
       <Column
         label="Semis"
         matches={[buildMatch(data.sf?.[LEFT.sf])]}
@@ -182,6 +252,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.sf.offset}
         gap={COLS.sf.gap}
       />
+      <StraightConn />
 
       {/* ── Final ── */}
       <div className="flex flex-col items-center w-[140px] flex-shrink-0">
@@ -202,6 +273,7 @@ export default function Bracket({ data, revealedRounds }) {
         </div>
       </div>
 
+      <StraightConn />
       {/* ── Right half (mirrored — SF closest to center) ── */}
       <Column
         label="Semis"
@@ -210,6 +282,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.sf.offset}
         gap={COLS.sf.gap}
       />
+      <Conn pairs={PAIRS.qf_sf} dir="right" />
       <Column
         label="Quarters"
         matches={build(RIGHT.qf, 'qf')}
@@ -217,6 +290,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.qf.offset}
         gap={COLS.qf.gap}
       />
+      <Conn pairs={PAIRS.r16_qf} dir="right" />
       <Column
         label="Round of 16"
         matches={build(RIGHT.r16, 'r16')}
@@ -224,6 +298,7 @@ export default function Bracket({ data, revealedRounds }) {
         offset={COLS.r16.offset}
         gap={COLS.r16.gap}
       />
+      <Conn pairs={PAIRS.r32_r16} dir="right" />
       <Column
         label="Round of 32"
         matches={build(RIGHT.r32, 'r32')}
