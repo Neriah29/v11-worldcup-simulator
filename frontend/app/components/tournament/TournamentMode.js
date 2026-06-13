@@ -75,6 +75,11 @@ export default function TournamentMode() {
   const isEdited = initialGroups && editableGroups &&
     JSON.stringify(initialGroups) !== JSON.stringify(editableGroups)
 
+  // Teams currently assigned to any group slot — excluded from autocomplete
+  const usedTeams = new Set(
+    editableGroups ? Object.values(editableGroups).flat() : []
+  )
+
   const sleep = (ms) => new Promise(res => { animationRef.current = setTimeout(res, ms) })
 
   const runAnimation = useCallback(async (data) => {
@@ -306,7 +311,7 @@ export default function TournamentMode() {
                       groups={displayGroups}
                       groupResults={groupResults}
                       editable={phase === 'idle' && !tournamentData}
-                      allTeams={allTeams}
+                      allTeams={allTeams.filter(t => !usedTeams.has(t))}
                       onTeamChange={handleTeamChange}
                     />
                   </div>
