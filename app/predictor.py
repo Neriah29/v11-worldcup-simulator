@@ -17,6 +17,9 @@ DATA_PATH    = Path(__file__).parent / "data" / "results.csv"
 RANKING_PATH = Path(__file__).parent / "data" / "fifa_ranking_24.csv"
 MODELS_PATH  = Path(__file__).parent / "data" / "trained_models.pkl"
 
+# Bump this whenever models are added/removed so the pkl is rebuilt on next start.
+MODELS_VERSION = 2
+
 # ─── Global state ────────────────────────────────────────────────────────────
 models            = {}
 scaler            = None
@@ -117,15 +120,15 @@ MODEL_CONFIGS = {
     },
     "mlp": {
         "label": "Neural Network (MLP)",
-        "badge": "Coming Soon",
-        "available": False,
-        "instance": None
+        "badge": "",
+        "available": True,
+        "instance": lambda: MLP(hidden_layer_sizes=(64, 32), learning_rate=0.005, n_epochs=500)
     },
     "svm": {
         "label": "Support Vector Machine",
-        "badge": "Coming Soon",
-        "available": False,
-        "instance": None
+        "badge": "",
+        "available": True,
+        "instance": lambda: SVM(C=1.0, kernel='linear', max_iter=200, random_state=42)
     },
 }
 
@@ -374,6 +377,7 @@ def save(path: Path = MODELS_PATH):
     """Save trained models, scaler, and team stats to disk."""
     with open(path, "wb") as f:
         pickle.dump({
+            "version":           MODELS_VERSION,
             "models":            models,
             "scaler":            scaler,
             "team_latest_stats": team_latest_stats,
@@ -388,6 +392,9 @@ def load(path: Path = MODELS_PATH) -> bool:
         return False
     with open(path, "rb") as f:
         payload = pickle.load(f)
+    if payload.get("version") != MODELS_VERSION:
+        print(f"Model version mismatch (pkl={payload.get('version')}, code={MODELS_VERSION}) — retraining.")
+        return False
     models            = payload["models"]
     scaler            = payload["scaler"]
     team_latest_stats = payload["team_latest_stats"]
@@ -511,11 +518,19 @@ def train():
     accuracies = {}
     for key, config in MODEL_CONFIGS.items():
         if not config["available"]:
-            print(f"  Skipping {config['label']} (coming soon)")
             continue
         print(f"  Training {config['label']}...")
         m = config['instance']()
-        m.fit(X_train_sc, y_train)
+
+        # SVM precomputes an n×n kernel matrix — subsample to keep memory safe
+        if key == "svm":
+            rng_svm = np.random.RandomState(42)
+            n_sub = min(3000, len(X_train_sc))
+            idx = rng_svm.choice(len(X_train_sc), size=n_sub, replace=False)
+            m.fit(X_train_sc[idx], y_train[idx])
+        else:
+            m.fit(X_train_sc, y_train)
+
         models[key] = m
         acc = float(np.mean(m.predict(X_test_sc) == y_test))
         accuracies[key] = acc

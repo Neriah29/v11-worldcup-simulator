@@ -8,6 +8,8 @@ const MODELS = [
   { key: 'knn',                 label: 'K-Nearest Neighbors' },
   { key: 'decision_tree',       label: 'Decision Tree' },
   { key: 'perceptron',          label: 'Perceptron' },
+  { key: 'mlp',                 label: 'Neural Network' },
+  { key: 'svm',                 label: 'SVM' },
 ]
 
 const PRESETS = [100, 500, 1000, 5000, 10000]

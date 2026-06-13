@@ -7,10 +7,12 @@ import Bracket from './Bracket'
 
 const MODELS = [
   { key: 'logistic_regression', label: 'Logistic Regression' },
-  { key: 'naive_bayes', label: 'Naive Bayes' },
-  { key: 'knn', label: 'K-Nearest Neighbors' },
-  { key: 'decision_tree', label: 'Decision Tree' },
-  { key: 'perceptron', label: 'Perceptron' },
+  { key: 'naive_bayes',         label: 'Naive Bayes' },
+  { key: 'knn',                 label: 'K-Nearest Neighbors' },
+  { key: 'decision_tree',       label: 'Decision Tree' },
+  { key: 'perceptron',          label: 'Perceptron' },
+  { key: 'mlp',                 label: 'Neural Network' },
+  { key: 'svm',                 label: 'SVM' },
 ]
 
 // Animation timing (ms)
