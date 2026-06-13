@@ -238,6 +238,19 @@ export default function TournamentMode() {
         </div>
       )}
 
+      {/* Onboarding hints — outside the canvas so they're never scaled */}
+      {phase === 'idle' && !tournamentData && (
+        <div className="flex-shrink-0 px-8 py-3 border-b border-white/5 flex items-center gap-5 flex-wrap">
+          <span className="text-white/50 text-sm">Drag to pan</span>
+          <span className="text-white/20">·</span>
+          <span className="text-white/50 text-sm">Scroll to zoom</span>
+          <span className="text-white/20">·</span>
+          <span className="text-white/50 text-sm">Click a team name to swap it</span>
+          <span className="text-white/20">·</span>
+          <span className="text-white/50 text-sm">Then hit <span className="text-emerald-400 font-semibold">Simulate</span></span>
+        </div>
+      )}
+
       {/* Canvas — always visible */}
       <div className="flex-1 min-h-0 overflow-hidden bg-[#07070d] relative">
 
@@ -283,19 +296,6 @@ export default function TournamentMode() {
                 contentStyle={{ padding: '32px' }}
               >
                 <div className="flex flex-col gap-10">
-
-                  {/* Onboarding hints — visible before first simulate */}
-                  {phase === 'idle' && !tournamentData && (
-                    <div className="flex items-center gap-4 flex-wrap text-white/40 text-xs tracking-wide select-none -mb-4">
-                      <span>Drag to pan</span>
-                      <span className="text-white/20">·</span>
-                      <span>Scroll to zoom</span>
-                      <span className="text-white/20">·</span>
-                      <span>Click a team name to swap it</span>
-                      <span className="text-white/20">·</span>
-                      <span>Then hit <span className="text-emerald-400">Simulate</span></span>
-                    </div>
-                  )}
 
                   {/* Group Stage — always shown */}
                   <div>
