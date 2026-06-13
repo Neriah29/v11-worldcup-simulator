@@ -27,6 +27,10 @@ export default function TournamentMode() {
 
   // Static group list shown on load (blank stats until simulate)
   const [initialGroups, setInitialGroups] = useState(null)
+  // Mutable copy the user can edit
+  const [editableGroups, setEditableGroups] = useState(null)
+  // All known teams for autocomplete
+  const [allTeams, setAllTeams] = useState([])
 
   // Raw data from API
   const [tournamentData, setTournamentData] = useState(null)
@@ -38,13 +42,38 @@ export default function TournamentMode() {
 
   const animationRef = useRef(null)
 
-  // Fetch groups on mount so the canvas is never blank
+  // Fetch groups + team list on mount so the canvas is never blank
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/tournament/groups`)
       .then(r => r.json())
-      .then(d => setInitialGroups(d.groups))
+      .then(d => {
+        setInitialGroups(d.groups)
+        setEditableGroups(d.groups)
+      })
+      .catch(() => {})
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams`)
+      .then(r => r.json())
+      .then(d => setAllTeams(d.teams || []))
       .catch(() => {})
   }, [])
+
+  function handleTeamChange(letter, oldTeam, newTeam) {
+    setEditableGroups(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        [letter]: prev[letter].map(t => t === oldTeam ? newTeam : t),
+      }
+    })
+  }
+
+  function handleResetGroups() {
+    setEditableGroups(initialGroups)
+  }
+
+  const isEdited = initialGroups && editableGroups &&
+    JSON.stringify(initialGroups) !== JSON.stringify(editableGroups)
 
   const sleep = (ms) => new Promise(res => { animationRef.current = setTimeout(res, ms) })
 
@@ -99,7 +128,12 @@ export default function TournamentMode() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tournament/simulate?model=${selectedModel}`
+        `${process.env.NEXT_PUBLIC_API_URL}/tournament/simulate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: selectedModel, groups: editableGroups || null }),
+        }
       )
       if (!res.ok) {
         const err = await res.json()
@@ -122,16 +156,17 @@ export default function TournamentMode() {
     setShowBracket(false)
     setRevealedRounds({ r32: 0, r16: 0, qf: 0, sf: 0, final: 0 })
     setError(null)
+    // keep editableGroups — user's team edits survive a reset
   }
 
-  // Derive the group→teams map: prefer live data after simulate, fall back to initial fetch
+  // Derive the group→teams map: prefer live data after simulate, fall back to editable groups
   const displayGroups = tournamentData
     ? Object.fromEntries(
         Object.entries(tournamentData.groups).map(([k, v]) => [
           k, v.standings.map(s => s.team)
         ])
       )
-    : initialGroups
+    : editableGroups
 
   const champion = phase === 'done' && tournamentData?.champion
 
@@ -167,6 +202,15 @@ export default function TournamentMode() {
               <span className="text-emerald-400 text-xs font-bold tracking-wide">{champion}</span>
               <span className="text-white/20 text-[10px] tracking-widest uppercase">Champion</span>
             </div>
+          )}
+
+          {isEdited && phase === 'idle' && (
+            <button
+              onClick={handleResetGroups}
+              className="px-4 py-2 border border-white/10 text-white/30 text-xs tracking-widest uppercase rounded hover:border-white/20 hover:text-white/50 transition-all"
+            >
+              Reset Teams
+            </button>
           )}
 
           {(phase === 'done' || phase === 'animating') && (
@@ -248,6 +292,9 @@ export default function TournamentMode() {
                     <GroupGrid
                       groups={displayGroups}
                       groupResults={groupResults}
+                      editable={phase === 'idle' && !tournamentData}
+                      allTeams={allTeams}
+                      onTeamChange={handleTeamChange}
                     />
                   </div>
 

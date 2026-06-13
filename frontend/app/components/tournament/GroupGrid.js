@@ -1,9 +1,80 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
+
 const GROUP_LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L']
 
-function GroupTable({ letter, teams, results }) {
-  // Build standings from results
+// ---------------------------------------------------------------------------
+// Editable team name cell with autocomplete dropdown
+// ---------------------------------------------------------------------------
+
+function EditableTeam({ team, allTeams, onSave, onCancel }) {
+  const [query, setQuery] = useState(team)
+  const inputRef = useRef(null)
+  const containerRef = useRef(null)
+
+  const filtered = query.length >= 1
+    ? allTeams.filter(t => t.toLowerCase().includes(query.toLowerCase()) && t !== team).slice(0, 8)
+    : []
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        onCancel()
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [onCancel])
+
+  function handleKey(e) {
+    if (e.key === 'Escape') { onCancel(); return }
+    if (e.key === 'Enter') {
+      const trimmed = query.trim()
+      if (trimmed && trimmed !== team) onSave(trimmed)
+      else onCancel()
+    }
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        ref={inputRef}
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        onKeyDown={handleKey}
+        className="w-[110px] bg-[#0f0f1a] border border-emerald-400/40 rounded px-1.5 py-0.5 text-[11px] text-white font-mono focus:outline-none focus:border-emerald-400"
+      />
+      {filtered.length > 0 && (
+        <div className="absolute top-full left-0 mt-0.5 z-50 bg-[#0f0f1a] border border-white/15 rounded shadow-xl min-w-[140px]">
+          {filtered.map(t => (
+            <button
+              key={t}
+              onMouseDown={() => onSave(t)}
+              className="w-full text-left px-2.5 py-1.5 text-[11px] text-white/70 hover:text-white hover:bg-white/5 transition-colors font-mono"
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Group table
+// ---------------------------------------------------------------------------
+
+function GroupTable({ letter, teams, results, editable, allTeams, onTeamChange }) {
+  const [editing, setEditing] = useState(null) // team name being edited
+
   const standings = teams.map(team => {
     const teamResults = results ? results.filter(r => r.home === team || r.away === team) : []
     let pts = 0, w = 0, d = 0, l = 0, gf = 0, ga = 0
@@ -25,10 +96,18 @@ function GroupTable({ letter, teams, results }) {
 
   const done = results && results.length === 6
 
+  function handleSave(oldTeam, newTeam) {
+    setEditing(null)
+    onTeamChange?.(letter, oldTeam, newTeam)
+  }
+
   return (
     <div className="border border-white/10 rounded-lg overflow-hidden bg-white/[0.02]">
       <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
         <span className="text-emerald-400 text-xs font-bold tracking-widest">GROUP {letter}</span>
+        {editable && (
+          <span className="ml-auto text-white/15 text-[9px] tracking-widest uppercase">click to edit</span>
+        )}
       </div>
       <table className="w-full text-xs">
         <thead>
@@ -50,17 +129,36 @@ function GroupTable({ letter, teams, results }) {
                 done && i < 2 ? 'text-white' : 'text-white/50'
               }`}
             >
-              <td className="px-3 py-2 flex items-center gap-1.5">
-                {done && i < 2 && (
-                  <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
-                )}
-                {done && i === 2 && (
-                  <span className="w-1 h-1 rounded-full bg-yellow-400/60 inline-block flex-shrink-0" />
-                )}
-                {(!done || i > 2) && (
-                  <span className="w-1 h-1 rounded-full inline-block flex-shrink-0" />
-                )}
-                <span className="truncate max-w-[90px]">{s.team}</span>
+              <td className="px-3 py-1.5">
+                <div className="flex items-center gap-1.5">
+                  {done && i < 2 && (
+                    <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
+                  )}
+                  {done && i === 2 && (
+                    <span className="w-1 h-1 rounded-full bg-yellow-400/60 inline-block flex-shrink-0" />
+                  )}
+                  {(!done || i > 2) && (
+                    <span className="w-1 h-1 rounded-full inline-block flex-shrink-0" />
+                  )}
+
+                  {editable && editing === s.team ? (
+                    <EditableTeam
+                      team={s.team}
+                      allTeams={allTeams}
+                      onSave={newTeam => handleSave(s.team, newTeam)}
+                      onCancel={() => setEditing(null)}
+                    />
+                  ) : editable ? (
+                    <button
+                      onClick={() => setEditing(s.team)}
+                      className="truncate max-w-[90px] text-left hover:text-emerald-400 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                    >
+                      {s.team}
+                    </button>
+                  ) : (
+                    <span className="truncate max-w-[90px]">{s.team}</span>
+                  )}
+                </div>
               </td>
               <td className="text-center px-1 py-2">{s.played}</td>
               <td className="text-center px-1 py-2">{s.w}</td>
@@ -76,7 +174,11 @@ function GroupTable({ letter, teams, results }) {
   )
 }
 
-export default function GroupGrid({ groups, groupResults }) {
+// ---------------------------------------------------------------------------
+// Group grid
+// ---------------------------------------------------------------------------
+
+export default function GroupGrid({ groups, groupResults, editable, allTeams, onTeamChange }) {
   if (!groups) return null
 
   return (
@@ -87,6 +189,9 @@ export default function GroupGrid({ groups, groupResults }) {
           letter={letter}
           teams={groups[letter] || []}
           results={groupResults ? groupResults[letter] : null}
+          editable={editable}
+          allTeams={allTeams || []}
+          onTeamChange={onTeamChange}
         />
       ))}
     </div>

@@ -2,9 +2,16 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
 from app import predictor
 from app import tournament as tour
 from app.data.wc2026_groups import GROUPS
+
+
+class SimulateRequest(BaseModel):
+    model: str = "logistic_regression"
+    groups: Optional[dict] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -98,6 +105,21 @@ def tournament_simulate(model: str = "logistic_regression"):
         raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
     try:
         result = tour.simulate_tournament(groups=None, model_key=model)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/tournament/simulate")
+def tournament_simulate_post(req: SimulateRequest):
+    """
+    Simulate with optional custom group assignments.
+    Body: { "model": str, "groups": { "A": ["Team1", ...], ... } | null }
+    """
+    if req.model not in predictor.models:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
+    try:
+        result = tour.simulate_tournament(groups=req.groups, model_key=req.model)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
