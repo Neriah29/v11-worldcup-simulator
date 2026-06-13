@@ -597,7 +597,7 @@ def predict(home_team: str, away_team: str, model_key: str = "logistic_regressio
         "model_label":          MODEL_CONFIGS[model_key]["label"],
         "home_win_probability": round(prob, 3),
         "away_win_probability": round(1 - prob, 3),
-        "predicted_winner":     home_team if prob > 0.5 else away_team,
+        "predicted_winner":     str(np.random.choice([home_team, away_team], p=[prob, 1 - prob])),
     }
 
 
