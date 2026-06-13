@@ -252,7 +252,7 @@ export default function Home() {
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-xs text-white/40 mb-2 tracking-widest uppercase">
-                  <span>{result.home_team}</span>
+                  <span>{result.home_team} win</span>
                   <span>{(result.home_win_probability * 100).toFixed(1)}%</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -265,7 +265,20 @@ export default function Home() {
 
               <div>
                 <div className="flex justify-between text-xs text-white/40 mb-2 tracking-widest uppercase">
-                  <span>{result.away_team}</span>
+                  <span>Draw</span>
+                  <span>{(result.draw_probability * 100).toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 bg-white/20"
+                    style={{ width: `${result.draw_probability * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs text-white/40 mb-2 tracking-widest uppercase">
+                  <span>{result.away_team} win</span>
                   <span>{(result.away_win_probability * 100).toFixed(1)}%</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">

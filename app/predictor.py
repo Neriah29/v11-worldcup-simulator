@@ -531,6 +531,59 @@ def train():
 # PREDICT
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _raw_prob(team_a: str, team_b: str, model_key: str, neutral: int) -> float:
+    """
+    Internal: return the model's raw P(team_a wins) with team_a in the home slot.
+    Uses overall win rate for both teams when neutral=1.
+    """
+    h = team_latest_stats[team_a]
+    a = team_latest_stats[team_b]
+
+    h_rank, a_rank = h.get('rank', np.nan),   a.get('rank', np.nan)
+    h_pts,  a_pts  = h.get('points', np.nan), a.get('points', np.nan)
+    h_conf, a_conf = h.get('conf', None),     a.get('conf', None)
+    h_elo,  a_elo  = h.get('elo', 1500),      a.get('elo', 1500)
+
+    h_days_rest = min(h.get('days_rest', 30), 90)
+    a_days_rest = min(a.get('days_rest', 30), 90)
+    h_pts = np.clip(h_pts, -500, 500) if not np.isnan(h_pts) else np.nan
+    a_pts = np.clip(a_pts, -500, 500) if not np.isnan(a_pts) else np.nan
+
+    rank_diff   = (h_rank - a_rank) if not (np.isnan(h_rank) or np.isnan(a_rank)) else 0.0
+    points_diff = (h_pts  - a_pts)  if not (np.isnan(h_pts)  or np.isnan(a_pts))  else 0.0
+    same_conf   = 1 if (h_conf and a_conf and h_conf == a_conf) else 0
+    elo_diff    = h_elo - a_elo
+
+    # Neutral mode: use each team's overall win rate so neither gets a home/away edge
+    if neutral:
+        h_win_rate = (h.get('win_rate_home', 0.5) + h.get('win_rate_away', 0.5)) / 2
+        a_win_rate = (a.get('win_rate_home', 0.5) + a.get('win_rate_away', 0.5)) / 2
+    else:
+        h_win_rate = h.get('win_rate_home', 0.5)
+        a_win_rate = a.get('win_rate_away', 0.5)
+
+    features = np.array([[
+        h['goals_rolling'], a['goals_rolling'],
+        h['conceded_rolling'], a['conceded_rolling'],
+        h_win_rate, a_win_rate,
+        neutral,
+        rank_diff, points_diff, same_conf,
+        h_elo, a_elo, elo_diff,
+        h.get('gd_rolling', 0), a.get('gd_rolling', 0),
+        h.get('streak', 0), a.get('streak', 0),
+        h.get('clean_sheet_rate', 0), a.get('clean_sheet_rate', 0),
+        h_days_rest, a_days_rest,
+        0.5,  # h2h_home_win_rate — fallback
+    ]])
+
+    features_scaled = scaler.transform(features)
+    model = models[model_key]
+
+    if model_key == "perceptron":
+        return float(model.predict(features_scaled)[0])
+    return float(np.clip(model.predict_proba(features_scaled)[0], 0.02, 0.98))
+
+
 def predict(home_team: str, away_team: str, model_key: str = "logistic_regression", neutral: int = 0):
     if home_team not in team_latest_stats:
         raise ValueError(f"Unknown team: {home_team}")
@@ -539,65 +592,47 @@ def predict(home_team: str, away_team: str, model_key: str = "logistic_regressio
     if model_key not in models:
         raise ValueError(f"Unknown model: {model_key}")
 
-    h = team_latest_stats[home_team]
-    a = team_latest_stats[away_team]
-
-    h_rank, a_rank     = h.get('rank', np.nan),   a.get('rank', np.nan)
-    h_pts,  a_pts      = h.get('points', np.nan), a.get('points', np.nan)
-    h_conf, a_conf     = h.get('conf', None),     a.get('conf', None)
-    h_elo,  a_elo      = h.get('elo', 1500),      a.get('elo', 1500)
-
-    h_days_rest = min(h.get('days_rest', 30), 90)
-    a_days_rest = min(a.get('days_rest', 30), 90)
-    h_pts  = np.clip(h.get('points', np.nan), -500, 500) if not np.isnan(h.get('points', np.nan)) else np.nan
-    a_pts  = np.clip(a.get('points', np.nan), -500, 500) if not np.isnan(a.get('points', np.nan)) else np.nan
-
-    rank_diff   = (h_rank - a_rank) if not (np.isnan(h_rank) or np.isnan(a_rank)) else 0.0
-    points_diff = (h_pts  - a_pts)  if not (np.isnan(h_pts)  or np.isnan(a_pts))  else 0.0
-    same_conf   = 1 if (h_conf and a_conf and h_conf == a_conf) else 0
-    elo_diff    = h_elo - a_elo
-
-    features = np.array([[
-        h['goals_rolling'],
-        a['goals_rolling'],
-        h['conceded_rolling'],
-        a['conceded_rolling'],
-        h.get('win_rate_home', 0.5),
-        a.get('win_rate_away', 0.5),
-        neutral,
-        rank_diff,
-        points_diff,
-        same_conf,
-        h_elo,
-        a_elo,
-        elo_diff,
-        h.get('gd_rolling', 0),
-        a.get('gd_rolling', 0),
-        h.get('streak', 0),
-        a.get('streak', 0),
-        h.get('clean_sheet_rate', 0),
-        a.get('clean_sheet_rate', 0),
-        h_days_rest,
-        a_days_rest,
-        0.5,                            # h2h_home_win_rate — fallback, no h2h lookup at predict time
-    ]])
-
-    features_scaled = scaler.transform(features)
-    model           = models[model_key]
-
-    if model_key == "perceptron":
-        prob = float(model.predict(features_scaled)[0])
+    if neutral:
+        # For neutral matches, average the prediction from both orderings.
+        # This removes any residual home-slot bias so that swapping the two
+        # teams gives symmetric results — essential for World Cup Mode.
+        p1 = _raw_prob(home_team, away_team, model_key, neutral)
+        p2 = _raw_prob(away_team, home_team, model_key, neutral)
+        prob = (p1 + (1 - p2)) / 2
     else:
-        prob = float(np.clip(model.predict_proba(features_scaled)[0], 0.02, 0.98))
+        prob = _raw_prob(home_team, away_team, model_key, neutral)
+
+    if neutral:
+        # Neutral mode: scale both win probs by (1 - draw_rate) so that
+        # swapping which team is in slot 1 gives identical predictions.
+        # Draw rate held fixed at the historical neutral-match average (22.3%).
+        _DRAW_RATE_NEUTRAL = 0.223
+        home_win = round(prob * (1 - _DRAW_RATE_NEUTRAL), 3)
+        draw_prob = _DRAW_RATE_NEUTRAL
+        away_prob = round((1 - prob) * (1 - _DRAW_RATE_NEUTRAL), 3)
+    else:
+        # Non-neutral: prob = P(home wins outright) from the model.
+        # Estimate draw from match closeness; remainder = away wins.
+        spread    = abs(prob - 0.5)
+        draw_prob = float(np.clip(0.28 - 0.28 * spread, 0.08, 0.28))
+        home_win  = prob
+        away_prob = float(max(0.02, 1.0 - prob - draw_prob))
+
+    # Winner draw uses only win probabilities (draws excluded) — always produces
+    # a winner. Normalize so the two win probs sum to 1.
+    win_total  = home_win + away_prob
+    p_home_win = home_win  / win_total
+    p_away_win = away_prob / win_total
 
     return {
         "home_team":            home_team,
         "away_team":            away_team,
         "model":                model_key,
         "model_label":          MODEL_CONFIGS[model_key]["label"],
-        "home_win_probability": round(prob, 3),
-        "away_win_probability": round(1 - prob, 3),
-        "predicted_winner":     str(np.random.choice([home_team, away_team], p=[prob, 1 - prob])),
+        "home_win_probability": round(home_win, 3),
+        "draw_probability":     round(draw_prob, 3),
+        "away_win_probability": round(away_prob, 3),
+        "predicted_winner":     str(np.random.choice([home_team, away_team], p=[p_home_win, p_away_win])),
     }
 
 
