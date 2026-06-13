@@ -52,7 +52,7 @@ function EditableTeam({ team, allTeams, onSave, onCancel }) {
         className="w-[110px] bg-[#0f0f1a] border border-emerald-400/40 rounded px-1.5 py-0.5 text-[11px] text-white font-mono focus:outline-none focus:border-emerald-400"
       />
       {filtered.length > 0 && (
-        <div className="absolute top-full left-0 mt-0.5 z-50 bg-[#0f0f1a] border border-white/15 rounded shadow-xl min-w-[140px]">
+        <div className="absolute bottom-full left-0 mb-0.5 z-50 bg-[#0f0f1a] border border-white/15 rounded shadow-xl min-w-[140px]">
           {filtered.map(t => (
             <button
               key={t}
