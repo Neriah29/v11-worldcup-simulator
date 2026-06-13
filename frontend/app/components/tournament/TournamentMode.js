@@ -284,6 +284,19 @@ export default function TournamentMode() {
               >
                 <div className="flex flex-col gap-10">
 
+                  {/* Onboarding hints — visible before first simulate */}
+                  {phase === 'idle' && !tournamentData && (
+                    <div className="flex items-center gap-4 flex-wrap text-white/20 text-[10px] tracking-widest uppercase select-none -mb-4">
+                      <span>drag to pan</span>
+                      <span className="text-white/10">·</span>
+                      <span>scroll to zoom</span>
+                      <span className="text-white/10">·</span>
+                      <span>click a team to swap it</span>
+                      <span className="text-white/10">·</span>
+                      <span>then hit <span className="text-emerald-400/60">Simulate</span></span>
+                    </div>
+                  )}
+
                   {/* Group Stage — always shown */}
                   <div>
                     <p className="text-white/20 text-[10px] tracking-[0.5em] uppercase mb-4">
