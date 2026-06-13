@@ -257,7 +257,7 @@ export default function TournamentMode() {
         )}
 
         <TransformWrapper
-          initialScale={0.9}
+          initialScale={0.81}
           minScale={0.2}
           maxScale={2}
           initialPositionX={20}
