@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from app import predictor
@@ -58,12 +59,28 @@ def tournament_groups():
     return {"groups": GROUPS}
 
 
-@app.get("/tournament/monte_carlo")
-def tournament_monte_carlo(runs: int = 100, model: str = "logistic_regression"):
-    """Run the tournament N times (max 1000) and return aggregated win statistics."""
+@app.get("/tournament/monte_carlo/stream")
+def tournament_monte_carlo_stream(runs: int = 500, model: str = "logistic_regression"):
+    """SSE stream: yields cumulative stats after every batch of simulations."""
     if model not in predictor.models:
         raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
-    runs = max(1, min(runs, 1000))
+    runs = max(1, min(runs, 10_000))
+    return StreamingResponse(
+        tour.monte_carlo_stream(runs=runs, model_key=model),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # prevent nginx/Railway proxy buffering
+        },
+    )
+
+
+@app.get("/tournament/monte_carlo")
+def tournament_monte_carlo(runs: int = 100, model: str = "logistic_regression"):
+    """Run the tournament N times (max 10 000) and return aggregated win statistics."""
+    if model not in predictor.models:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
+    runs = max(1, min(runs, 10_000))
     try:
         result = tour.monte_carlo(runs=runs, model_key=model)
         return result

@@ -504,69 +504,95 @@ def simulate_tournament(
 # Monte Carlo
 # ---------------------------------------------------------------------------
 
-def monte_carlo(
-    runs: int = 100,
-    model_key: str = "logistic_regression",
-) -> dict[str, Any]:
-    """
-    Run the full tournament `runs` times and aggregate team statistics.
-
-    Returns
-    -------
-    {
-      "runs":  int,
-      "model": str,
-      "teams": [
-        {
-          "team":          str,
-          "champion_pct":  float,   # % of runs won
-          "finalist_pct":  float,   # % reached final
-          "semi_pct":      float,   # % reached SF
-          "quarter_pct":   float,   # % reached QF
-          "champion_n":    int,     # raw count
-        },
-        ...
-      ]   # sorted by champion_pct desc
-    }
-    """
-    runs = max(1, min(runs, 1000))
-
-    counts: dict[str, dict[str, int]] = {
+def _blank_counts() -> dict[str, dict[str, int]]:
+    return {
         team: {"champion": 0, "finalist": 0, "semi": 0, "quarter": 0}
         for team in ALL_TEAMS
     }
 
-    for _ in range(runs):
-        r = simulate_tournament(model_key=model_key)
 
-        counts[r["champion"]]["champion"] += 1
+def _accumulate(counts: dict, r: dict) -> None:
+    """Add one tournament result into the running counts dict."""
+    counts[r["champion"]]["champion"] += 1
 
-        f = r["final"][0]
-        for team in (f["home"], f["away"]):
+    f = r["final"][0]
+    for team in (f["home"], f["away"]):
+        if team in counts:
+            counts[team]["finalist"] += 1
+
+    for match in r["sf"]:
+        for team in (match["home"], match["away"]):
             if team in counts:
-                counts[team]["finalist"] += 1
+                counts[team]["semi"] += 1
 
-        for match in r["sf"]:
-            for team in (match["home"], match["away"]):
-                if team in counts:
-                    counts[team]["semi"] += 1
+    for match in r["qf"]:
+        for team in (match["home"], match["away"]):
+            if team in counts:
+                counts[team]["quarter"] += 1
 
-        for match in r["qf"]:
-            for team in (match["home"], match["away"]):
-                if team in counts:
-                    counts[team]["quarter"] += 1
 
+def _counts_to_teams(counts: dict, completed: int) -> list[dict]:
     teams_out = [
         {
             "team":         team,
-            "champion_pct": round(s["champion"]  / runs * 100, 1),
-            "finalist_pct": round(s["finalist"]  / runs * 100, 1),
-            "semi_pct":     round(s["semi"]      / runs * 100, 1),
-            "quarter_pct":  round(s["quarter"]   / runs * 100, 1),
+            "champion_pct": round(s["champion"]  / completed * 100, 1),
+            "finalist_pct": round(s["finalist"]  / completed * 100, 1),
+            "semi_pct":     round(s["semi"]      / completed * 100, 1),
+            "quarter_pct":  round(s["quarter"]   / completed * 100, 1),
             "champion_n":   s["champion"],
         }
         for team, s in counts.items()
     ]
-    teams_out.sort(key=lambda x: (x["champion_pct"], x["finalist_pct"], x["semi_pct"]), reverse=True)
+    teams_out.sort(
+        key=lambda x: (x["champion_pct"], x["finalist_pct"], x["semi_pct"]),
+        reverse=True,
+    )
+    return teams_out
 
-    return {"runs": runs, "model": model_key, "teams": teams_out}
+
+def monte_carlo(
+    runs: int = 100,
+    model_key: str = "logistic_regression",
+) -> dict[str, Any]:
+    """Run `runs` full tournaments and return aggregated statistics."""
+    runs = max(1, min(runs, 10_000))
+    counts = _blank_counts()
+
+    for _ in range(runs):
+        _accumulate(counts, simulate_tournament(model_key=model_key))
+
+    return {"runs": runs, "model": model_key, "teams": _counts_to_teams(counts, runs)}
+
+
+def monte_carlo_stream(runs: int, model_key: str):
+    """
+    Sync generator for SSE streaming of Monte Carlo results.
+
+    Yields one SSE `data:` line after every batch of simulations so the
+    frontend can update the bar chart in real time.  Designed to be wrapped
+    in a FastAPI StreamingResponse (runs in a threadpool, not the event loop).
+    """
+    import json
+
+    runs = max(1, min(runs, 10_000))
+    counts = _blank_counts()
+
+    # Aim for ~50 UI updates regardless of total run count
+    batch_size = max(10, runs // 50)
+    completed = 0
+
+    while completed < runs:
+        batch = min(batch_size, runs - completed)
+        for _ in range(batch):
+            _accumulate(counts, simulate_tournament(model_key=model_key))
+            completed += 1
+
+        payload = json.dumps({
+            "runs_done": completed,
+            "total":     runs,
+            "model":     model_key,
+            "teams":     _counts_to_teams(counts, completed),
+        })
+        yield f"data: {payload}\n\n"
+
+    yield "data: [DONE]\n\n"
