@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from app import predictor
+from app import tournament as tour
+from app.data.wc2026_groups import GROUPS
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,3 +50,24 @@ def predict(home_team: str, away_team: str, model: str = "logistic_regression", 
 def teams():
     teams = sorted(predictor.team_latest_stats.keys())
     return {"teams": teams}
+
+
+@app.get("/tournament/groups")
+def tournament_groups():
+    """Return the official WC 2026 group draw."""
+    return {"groups": GROUPS}
+
+
+@app.get("/tournament/simulate")
+def tournament_simulate(model: str = "logistic_regression"):
+    """
+    Simulate the full WC 2026 tournament and return all results in one shot.
+    The frontend uses this data to drive the animated bracket replay.
+    """
+    if model not in predictor.models:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
+    try:
+        result = tour.simulate_tournament(groups=None, model_key=model)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
