@@ -7,8 +7,8 @@ import MonteCarlo from './components/MonteCarlo'
 
 const TABS = [
   { id: 'tournament', label: 'Tournament' },
-  { id: 'match',      label: 'Match Predictor' },
   { id: 'monte',      label: 'Monte Carlo' },
+  { id: 'match',      label: 'Match Predictor' },
 ]
 
 export default function Home() {

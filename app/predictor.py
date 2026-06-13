@@ -554,13 +554,17 @@ def _raw_prob(team_a: str, team_b: str, model_key: str, neutral: int) -> float:
     same_conf   = 1 if (h_conf and a_conf and h_conf == a_conf) else 0
     elo_diff    = h_elo - a_elo
 
+    def _safe(val, default=0.5):
+        """Return default when val is None or NaN."""
+        return default if (val is None or (isinstance(val, float) and np.isnan(val))) else val
+
     # Neutral mode: use each team's overall win rate so neither gets a home/away edge
     if neutral:
-        h_win_rate = (h.get('win_rate_home', 0.5) + h.get('win_rate_away', 0.5)) / 2
-        a_win_rate = (a.get('win_rate_home', 0.5) + a.get('win_rate_away', 0.5)) / 2
+        h_win_rate = (_safe(h.get('win_rate_home')) + _safe(h.get('win_rate_away'))) / 2
+        a_win_rate = (_safe(a.get('win_rate_home')) + _safe(a.get('win_rate_away'))) / 2
     else:
-        h_win_rate = h.get('win_rate_home', 0.5)
-        a_win_rate = a.get('win_rate_away', 0.5)
+        h_win_rate = _safe(h.get('win_rate_home'))
+        a_win_rate = _safe(a.get('win_rate_away'))
 
     features = np.array([[
         h['goals_rolling'], a['goals_rolling'],
@@ -580,7 +584,8 @@ def _raw_prob(team_a: str, team_b: str, model_key: str, neutral: int) -> float:
     model = models[model_key]
 
     if model_key == "perceptron":
-        return float(model.predict(features_scaled)[0])
+        # Perceptron outputs hard {0,1} — clip to soft probabilities
+        return float(np.clip(model.predict(features_scaled)[0], 0.02, 0.98))
     return float(np.clip(model.predict_proba(features_scaled)[0], 0.02, 0.98))
 
 
@@ -612,11 +617,15 @@ def predict(home_team: str, away_team: str, model_key: str = "logistic_regressio
         away_prob = round((1 - prob) * (1 - _DRAW_RATE_NEUTRAL), 3)
     else:
         # Non-neutral: prob = P(home wins outright) from the model.
-        # Estimate draw from match closeness; remainder = away wins.
+        # Estimate draw probability from match closeness (more likely when even).
+        # Then normalize all three so they always sum to exactly 1.0.
         spread    = abs(prob - 0.5)
-        draw_prob = float(np.clip(0.28 - 0.28 * spread, 0.08, 0.28))
-        home_win  = prob
-        away_prob = float(max(0.02, 1.0 - prob - draw_prob))
+        draw_raw  = float(np.clip(0.28 - 0.28 * spread, 0.08, 0.28))
+        away_raw  = max(0.001, 1.0 - prob - draw_raw)
+        _total    = prob + draw_raw + away_raw
+        home_win  = prob      / _total
+        draw_prob = draw_raw  / _total
+        away_prob = away_raw  / _total
 
     # Winner draw uses only win probabilities (draws excluded) — always produces
     # a winner. Normalize so the two win probs sum to 1.
