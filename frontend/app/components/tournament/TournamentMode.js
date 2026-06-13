@@ -5,7 +5,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import GroupGrid from './GroupGrid'
 import Bracket from './Bracket'
 
-const MODELS = [
+const MODELS_FALLBACK = [
   { key: 'logistic_regression', label: 'Logistic Regression' },
   { key: 'naive_bayes',         label: 'Naive Bayes' },
   { key: 'knn',                 label: 'K-Nearest Neighbors' },
@@ -24,6 +24,7 @@ const KO_ROUND_GAP = 500
 
 export default function TournamentMode() {
   const [selectedModel, setSelectedModel] = useState('logistic_regression')
+  const [models, setModels] = useState(MODELS_FALLBACK)
   const [phase, setPhase] = useState('idle') // idle | loading | animating | done
   const [error, setError] = useState(null)
 
@@ -57,6 +58,11 @@ export default function TournamentMode() {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams`)
       .then(r => r.json())
       .then(d => setAllTeams(d.teams || []))
+      .catch(() => {})
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/models`)
+      .then(r => r.json())
+      .then(d => { if (d.models?.length) setModels(d.models) })
       .catch(() => {})
   }, [])
 
@@ -185,18 +191,23 @@ export default function TournamentMode() {
         <div>
           <p className="text-white/30 text-[10px] tracking-[0.4em] uppercase mb-2">Model</p>
           <div className="flex gap-1.5 flex-wrap">
-            {MODELS.map(m => (
+            {models.map(m => (
               <button
                 key={m.key}
                 onClick={() => setSelectedModel(m.key)}
                 disabled={phase === 'loading' || phase === 'animating'}
-                className={`px-3 py-1 rounded text-[10px] tracking-wide border transition-all ${
+                className={`px-3 py-1 rounded text-[10px] tracking-wide border transition-all flex items-center gap-1.5 ${
                   selectedModel === m.key
                     ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
                     : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {m.label}
+                {m.accuracy != null && (
+                  <span className={`text-[9px] tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-white/20'}`}>
+                    {(m.accuracy * 100).toFixed(1)}%
+                  </span>
+                )}
               </button>
             ))}
           </div>

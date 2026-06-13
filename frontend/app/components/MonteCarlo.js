@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
-const MODELS = [
+const MODELS_FALLBACK = [
   { key: 'logistic_regression', label: 'Logistic Regression' },
   { key: 'naive_bayes',         label: 'Naive Bayes' },
   { key: 'knn',                 label: 'K-Nearest Neighbors' },
@@ -32,6 +32,7 @@ export default function MonteCarlo() {
   const [runs, setRuns] = useState(1000)
   const [inputVal, setInputVal] = useState('1000')
   const [selectedModel, setSelectedModel] = useState('logistic_regression')
+  const [models, setModels] = useState(MODELS_FALLBACK)
   const [phase, setPhase] = useState('idle') // idle | running | done
   const [results, setResults] = useState(null)   // latest cumulative snapshot
   const [runsDone, setRunsDone] = useState(0)
@@ -39,6 +40,13 @@ export default function MonteCarlo() {
   const [view, setView] = useState('champion')
 
   const readerRef = useRef(null)
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/models`)
+      .then(r => r.json())
+      .then(d => { if (d.models?.length) setModels(d.models) })
+      .catch(() => {})
+  }, [])
 
   function handleRunsInput(val) {
     setInputVal(val)
@@ -172,18 +180,23 @@ export default function MonteCarlo() {
         <div>
           <p className="text-white/30 text-[10px] tracking-[0.4em] uppercase mb-3">Model</p>
           <div className="flex gap-1.5 flex-wrap">
-            {MODELS.map(m => (
+            {models.map(m => (
               <button
                 key={m.key}
                 onClick={() => setSelectedModel(m.key)}
                 disabled={phase === 'running'}
-                className={`px-3 py-1.5 rounded border text-[10px] tracking-wide transition-all ${
+                className={`px-3 py-1.5 rounded border text-[10px] tracking-wide transition-all flex items-center gap-1.5 ${
                   selectedModel === m.key
                     ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
                     : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {m.label}
+                {m.accuracy != null && (
+                  <span className={`text-[9px] tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-white/20'}`}>
+                    {(m.accuracy * 100).toFixed(1)}%
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -243,7 +256,7 @@ export default function MonteCarlo() {
             </div>
             <div className="text-right text-white/20 text-[10px] tracking-widest uppercase leading-relaxed">
               <p>{runsDone.toLocaleString()} runs{phase === 'running' ? '…' : ''}</p>
-              <p>{MODELS.find(m => m.key === results.model)?.label}</p>
+              <p>{models.find(m => m.key === results.model)?.label}</p>
             </div>
           </div>
 

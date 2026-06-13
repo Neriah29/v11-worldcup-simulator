@@ -24,6 +24,7 @@ MODELS_VERSION = 2
 models            = {}
 scaler            = None
 team_latest_stats = {}
+accuracies        = {}  # {model_key: float} populated after training
 
 # ─── Tournament importance weights ───────────────────────────────────────────
 # Higher weight = this tournament type carries more signal.
@@ -381,6 +382,7 @@ def save(path: Path = MODELS_PATH):
             "models":            models,
             "scaler":            scaler,
             "team_latest_stats": team_latest_stats,
+            "accuracies":        accuracies,
         }, f)
     print(f"Saved to {path}")
 
@@ -398,6 +400,7 @@ def load(path: Path = MODELS_PATH) -> bool:
     models            = payload["models"]
     scaler            = payload["scaler"]
     team_latest_stats = payload["team_latest_stats"]
+    accuracies        = payload.get("accuracies", {})
     print(f"Loaded pre-trained models. {len(team_latest_stats)} teams available.")
     return True
 
@@ -407,7 +410,7 @@ def load(path: Path = MODELS_PATH) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def train():
-    global models, scaler, team_latest_stats
+    global models, scaler, team_latest_stats, accuracies
 
     print("Loading match data...")
     df = pd.read_csv(DATA_PATH)
@@ -532,7 +535,7 @@ def train():
             m.fit(X_train_sc, y_train)
 
         models[key] = m
-        acc = float(np.mean(m.predict(X_test_sc) == y_test))
+        acc = round(float(np.mean(m.predict(X_test_sc) == y_test)), 4)
         accuracies[key] = acc
         print(f"    ✓ {config['label']} — test accuracy: {acc:.3f}")
 
@@ -665,8 +668,8 @@ def get_models():
         {
             "key":       key,
             "label":     config["label"],
-            "badge":     config["badge"],
             "available": config["available"],
+            "accuracy":  accuracies.get(key),  # None until trained
         }
         for key, config in MODEL_CONFIGS.items()
     ]
