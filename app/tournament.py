@@ -18,7 +18,7 @@ from itertools import combinations
 from typing import Any
 
 from app import predictor
-from app.data.wc2026_groups import GROUPS, to_dataset_name, to_display_name
+from app.data.wc2026_groups import GROUPS, ALL_TEAMS, to_dataset_name, to_display_name
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -498,3 +498,75 @@ def simulate_tournament(
         "champion": champion,
         "model":    model_key,
     }
+
+
+# ---------------------------------------------------------------------------
+# Monte Carlo
+# ---------------------------------------------------------------------------
+
+def monte_carlo(
+    runs: int = 100,
+    model_key: str = "logistic_regression",
+) -> dict[str, Any]:
+    """
+    Run the full tournament `runs` times and aggregate team statistics.
+
+    Returns
+    -------
+    {
+      "runs":  int,
+      "model": str,
+      "teams": [
+        {
+          "team":          str,
+          "champion_pct":  float,   # % of runs won
+          "finalist_pct":  float,   # % reached final
+          "semi_pct":      float,   # % reached SF
+          "quarter_pct":   float,   # % reached QF
+          "champion_n":    int,     # raw count
+        },
+        ...
+      ]   # sorted by champion_pct desc
+    }
+    """
+    runs = max(1, min(runs, 1000))
+
+    counts: dict[str, dict[str, int]] = {
+        team: {"champion": 0, "finalist": 0, "semi": 0, "quarter": 0}
+        for team in ALL_TEAMS
+    }
+
+    for _ in range(runs):
+        r = simulate_tournament(model_key=model_key)
+
+        counts[r["champion"]]["champion"] += 1
+
+        f = r["final"][0]
+        for team in (f["home"], f["away"]):
+            if team in counts:
+                counts[team]["finalist"] += 1
+
+        for match in r["sf"]:
+            for team in (match["home"], match["away"]):
+                if team in counts:
+                    counts[team]["semi"] += 1
+
+        for match in r["qf"]:
+            for team in (match["home"], match["away"]):
+                if team in counts:
+                    counts[team]["quarter"] += 1
+
+    teams_out = [
+        {
+            "team":         team,
+            "champion_pct": round(s["champion"]  / runs * 100, 1),
+            "finalist_pct": round(s["finalist"]  / runs * 100, 1),
+            "semi_pct":     round(s["semi"]      / runs * 100, 1),
+            "quarter_pct":  round(s["quarter"]   / runs * 100, 1),
+            "champion_n":   s["champion"],
+        }
+        for team, s in counts.items()
+    ]
+    teams_out.sort(key=lambda x: (x["champion_pct"], x["finalist_pct"], x["semi_pct"]), reverse=True)
+
+    return {"runs": runs, "model": model_key, "teams": teams_out}

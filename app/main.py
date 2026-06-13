@@ -58,6 +58,19 @@ def tournament_groups():
     return {"groups": GROUPS}
 
 
+@app.get("/tournament/monte_carlo")
+def tournament_monte_carlo(runs: int = 100, model: str = "logistic_regression"):
+    """Run the tournament N times (max 1000) and return aggregated win statistics."""
+    if model not in predictor.models:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
+    runs = max(1, min(runs, 1000))
+    try:
+        result = tour.monte_carlo(runs=runs, model_key=model)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/tournament/simulate")
 def tournament_simulate(model: str = "logistic_regression"):
     """

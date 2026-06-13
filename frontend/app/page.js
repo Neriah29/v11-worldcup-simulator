@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import MatchPredictor from './components/MatchPredictor'
 import TournamentMode from './components/tournament/TournamentMode'
+import MonteCarlo from './components/MonteCarlo'
 
 const TABS = [
   { id: 'tournament', label: 'Tournament' },
@@ -51,14 +52,7 @@ export default function Home() {
       <div className="flex-1 min-h-0 overflow-auto">
         {activeTab === 'tournament' && <TournamentMode />}
         {activeTab === 'match' && <MatchPredictor />}
-        {activeTab === 'monte' && (
-          <div className="flex items-center justify-center h-full min-h-[400px]">
-            <div className="text-center">
-              <p className="text-white/20 text-xs tracking-[0.5em] uppercase mb-3">Coming Soon</p>
-              <p className="text-white/10 text-sm">Run the tournament 10,000 times and see who wins most often</p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'monte' && <MonteCarlo />}
       </div>
 
     </main>
