@@ -62,7 +62,7 @@ export default function About() {
         <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-4">About</p>
         <h1 className="text-5xl font-bold tracking-tight leading-none mb-6">V11 Prediction Engine</h1>
         <p className="text-white/50 text-sm leading-relaxed">
-          A machine learning tournament simulator for FIFA World Cup 2026. Seven from-scratch ML models — built in pure NumPy — are trained on 45,000+ international matches dating back to 1872. Each model predicts match outcomes using 21 hand-engineered features covering form, Elo, rankings, head-to-head history, and more.
+          A machine learning tournament simulator for FIFA World Cup 2026 made by Neriah Okolo. Seven from-scratch ML models — built in pure NumPy — are trained on 45,000+ international matches dating back to 1872. Each model predicts match outcomes using 21 hand-engineered features covering form, Elo, rankings, head-to-head history, and more.
         </p>
       </div>
 
@@ -98,7 +98,7 @@ export default function About() {
       {/* Footer */}
       <div className="border-t border-white/5 pt-8">
         <p className="text-white/20 text-xs leading-relaxed">
-          Built for CMOR 438 / INDE 577 · Rice University · All models implemented from scratch in NumPy · Training data: international football results 1872–2024
+          Models learned in CMOR 438 / INDE 577 · Rice University · Made by Neriah Okolo · All models implemented from scratch in NumPy · Training data: international football results 1872–2024
         </p>
       </div>
 

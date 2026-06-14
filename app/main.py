@@ -110,6 +110,29 @@ def tournament_simulate(model: str = "logistic_regression"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/elo")
+def elo_rankings():
+    """Return all teams sorted by Elo rating descending."""
+    wc_teams = set()
+    for teams_list in GROUPS.values():
+        wc_teams.update(teams_list)
+
+    ranked = sorted(
+        [
+            {
+                "team": t,
+                "elo": round(float(s.get("elo", 1500)), 1),
+                "in_wc2026": t in wc_teams,
+            }
+            for t, s in predictor.team_latest_stats.items()
+        ],
+        key=lambda x: -x["elo"],
+    )
+    for i, t in enumerate(ranked):
+        t["rank"] = i + 1
+    return {"teams": ranked}
+
+
 @app.post("/tournament/simulate")
 def tournament_simulate_post(req: SimulateRequest):
     """
