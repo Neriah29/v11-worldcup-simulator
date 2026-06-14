@@ -5,11 +5,13 @@ import Image from 'next/image'
 import MatchPredictor from './components/MatchPredictor'
 import TournamentMode from './components/tournament/TournamentMode'
 import MonteCarlo from './components/MonteCarlo'
+import About from './components/About'
 
 const TABS = [
   { id: 'tournament', label: 'Tournament' },
   { id: 'monte',      label: 'Monte Carlo' },
   { id: 'match',      label: 'Match Predictor' },
+  { id: 'about',      label: 'About' },
 ]
 
 export default function Home() {
@@ -77,6 +79,7 @@ export default function Home() {
         {activeTab === 'tournament' && <TournamentMode />}
         {activeTab === 'match' && <MatchPredictor />}
         {activeTab === 'monte' && <MonteCarlo />}
+        {activeTab === 'about' && <About />}
       </div>
 
     </main>

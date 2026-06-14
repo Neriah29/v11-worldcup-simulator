@@ -2,14 +2,6 @@
 
 import { useState, useEffect } from 'react'
 
-const MODEL_ACCURACY = {
-  logistic_regression: 69.3,
-  naive_bayes: 68.5,
-  knn: 65.6,
-  perceptron: 62.1,
-  decision_tree: 59.7,
-}
-
 export default function MatchPredictor() {
   const [homeTeam, setHomeTeam] = useState('')
   const [awayTeam, setAwayTeam] = useState('')
@@ -54,6 +46,10 @@ export default function MatchPredictor() {
     setLoading(false)
   }
 
+  const sortedByAccuracy = [...availableModels]
+    .filter(m => m.available)
+    .sort((a, b) => (b.accuracy ?? 0) - (a.accuracy ?? 0))
+
   return (
     <div className="max-w-3xl mx-auto px-8 py-16">
 
@@ -80,6 +76,7 @@ export default function MatchPredictor() {
             {showAccuracy ? 'Hide accuracy ▴' : 'How accurate is each model? ▾'}
           </button>
         </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {availableModels.map(m => (
             <button
@@ -99,9 +96,9 @@ export default function MatchPredictor() {
               <p className={`text-xs font-bold tracking-wide ${selectedModel === m.key && m.available ? 'text-emerald-400' : 'text-white/70'}`}>
                 {m.label}
               </p>
-              {m.badge && (
-                <p className={`text-[10px] mt-1 tracking-widest uppercase ${m.badge === 'Coming Soon' ? 'text-white/20' : 'text-white/30'}`}>
-                  {m.badge}
+              {m.accuracy != null && (
+                <p className={`text-[10px] mt-1 tabular-nums ${selectedModel === m.key ? 'text-emerald-400/60' : 'text-white/25'}`}>
+                  {(m.accuracy * 100).toFixed(1)}% accuracy
                 </p>
               )}
               {selectedModel === m.key && m.available && (
@@ -114,28 +111,24 @@ export default function MatchPredictor() {
         {showAccuracy && (
           <div className="mt-2 border border-white/10 rounded p-4 bg-white/[0.02]">
             <p className="text-white/20 text-[10px] tracking-[0.3em] uppercase mb-4">
-              Based on tests conducted during model training — accuracy reflects performance on held-out match data
+              Test accuracy on held-out match data
             </p>
             <div className="space-y-3">
-              {availableModels
-                .filter(m => m.available)
-                .sort((a, b) => (MODEL_ACCURACY[b.key] || 0) - (MODEL_ACCURACY[a.key] || 0))
-                .map((m, i) => (
-                  <div key={m.key} className="flex items-center gap-3">
-                    <span className="text-white/20 text-[10px] w-4">{i + 1}</span>
-                    <span className="text-white/50 text-xs w-36 truncate">{m.label}</span>
-                    <div className="flex-1 h-px bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-400/40 rounded-full"
-                        style={{ width: `${MODEL_ACCURACY[m.key] || 0}%` }}
-                      />
-                    </div>
-                    <span className="text-white/40 text-xs w-10 text-right">
-                      {MODEL_ACCURACY[m.key] ? `${MODEL_ACCURACY[m.key]}%` : '—'}
-                    </span>
+              {sortedByAccuracy.map((m, i) => (
+                <div key={m.key} className="flex items-center gap-3">
+                  <span className="text-white/20 text-[10px] w-4">{i + 1}</span>
+                  <span className="text-white/50 text-xs w-40 truncate">{m.label}</span>
+                  <div className="flex-1 h-px bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-400/40 rounded-full"
+                      style={{ width: m.accuracy != null ? `${m.accuracy * 100}%` : '0%' }}
+                    />
                   </div>
-                ))
-              }
+                  <span className="text-white/40 text-xs w-12 text-right tabular-nums">
+                    {m.accuracy != null ? `${(m.accuracy * 100).toFixed(1)}%` : '—'}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}
