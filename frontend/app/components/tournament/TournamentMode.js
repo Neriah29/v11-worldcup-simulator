@@ -187,9 +187,9 @@ export default function TournamentMode() {
     <div className="flex flex-col h-full min-h-0">
 
       {/* Controls bar */}
-      <div className="flex-shrink-0 px-8 py-5 border-b border-white/10 flex items-center gap-6 flex-wrap">
+      <div className="flex-shrink-0 px-8 py-5 border-b border-ink/10 flex items-center gap-6 flex-wrap">
         <div>
-          <p className="text-white/30 text-[10px] tracking-[0.4em] uppercase mb-2">Model</p>
+          <p className="text-ink/30 text-[10px] tracking-[0.4em] uppercase mb-2">Model</p>
           <div className="flex gap-1.5 flex-wrap">
             {models.map(m => (
               <button
@@ -199,12 +199,12 @@ export default function TournamentMode() {
                 className={`px-3 py-1 rounded text-[10px] tracking-wide border transition-all flex items-center gap-1.5 ${
                   selectedModel === m.key
                     ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
-                    : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
+                    : 'border-ink/10 text-ink/40 hover:border-ink/20 hover:text-ink/60'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {m.label}
                 {m.accuracy != null && (
-                  <span className={`text-[9px] tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-white/20'}`}>
+                  <span className={`text-[9px] tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-ink/20'}`}>
                     {(m.accuracy * 100).toFixed(1)}%
                   </span>
                 )}
@@ -218,14 +218,14 @@ export default function TournamentMode() {
             <div className="flex items-center gap-2 px-3 py-1.5 border border-emerald-400/30 rounded bg-emerald-400/5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span className="text-emerald-400 text-xs font-bold tracking-wide">{champion}</span>
-              <span className="text-white/20 text-[10px] tracking-widest uppercase">Champion</span>
+              <span className="text-ink/20 text-[10px] tracking-widest uppercase">Champion</span>
             </div>
           )}
 
           {isEdited && phase === 'idle' && (
             <button
               onClick={handleResetGroups}
-              className="px-4 py-2 border border-white/10 text-white/30 text-xs tracking-widest uppercase rounded hover:border-white/20 hover:text-white/50 transition-all"
+              className="px-4 py-2 border border-ink/10 text-ink/30 text-xs tracking-widest uppercase rounded hover:border-ink/20 hover:text-ink/50 transition-all"
             >
               Reset Teams
             </button>
@@ -234,7 +234,7 @@ export default function TournamentMode() {
           {(phase === 'done' || phase === 'animating') && (
             <button
               onClick={handleReset}
-              className="px-4 py-2 border border-white/10 text-white/40 text-xs tracking-widest uppercase rounded hover:border-white/20 hover:text-white/60 transition-all"
+              className="px-4 py-2 border border-ink/10 text-ink/40 text-xs tracking-widest uppercase rounded hover:border-ink/20 hover:text-ink/60 transition-all"
             >
               Reset
             </button>
@@ -257,14 +257,14 @@ export default function TournamentMode() {
       )}
 
       {/* Canvas — always visible */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-[#07070d] relative">
+      <div className="flex-1 min-h-0 overflow-hidden bg-canvas relative">
 
         {/* Loading overlay (sits on top of the canvas) */}
         {phase === 'loading' && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#07070d]/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-canvas/80 backdrop-blur-sm">
             <div className="text-center space-y-3">
               <div className="w-6 h-6 border border-emerald-400/40 border-t-emerald-400 rounded-full animate-spin mx-auto" />
-              <p className="text-white/30 text-xs tracking-widest uppercase">Running simulation...</p>
+              <p className="text-ink/30 text-xs tracking-widest uppercase">Running simulation...</p>
             </div>
           </div>
         )}
@@ -284,15 +284,15 @@ export default function TournamentMode() {
               <div className="absolute top-4 right-4 z-10 flex flex-col gap-1">
                 <button
                   onClick={() => zoomIn()}
-                  className="w-8 h-8 border border-white/10 rounded text-white/40 hover:text-white/70 hover:border-white/20 transition-all text-lg leading-none flex items-center justify-center"
+                  className="w-8 h-8 border border-ink/10 rounded text-ink/40 hover:text-ink/70 hover:border-ink/20 transition-all text-lg leading-none flex items-center justify-center"
                 >+</button>
                 <button
                   onClick={() => zoomOut()}
-                  className="w-8 h-8 border border-white/10 rounded text-white/40 hover:text-white/70 hover:border-white/20 transition-all text-lg leading-none flex items-center justify-center"
+                  className="w-8 h-8 border border-ink/10 rounded text-ink/40 hover:text-ink/70 hover:border-ink/20 transition-all text-lg leading-none flex items-center justify-center"
                 >−</button>
                 <button
                   onClick={() => resetTransform()}
-                  className="w-8 h-8 border border-white/10 rounded text-white/30 hover:text-white/60 hover:border-white/20 transition-all text-[10px] leading-none flex items-center justify-center"
+                  className="w-8 h-8 border border-ink/10 rounded text-ink/30 hover:text-ink/60 hover:border-ink/20 transition-all text-[10px] leading-none flex items-center justify-center"
                 >↺</button>
               </div>
 
@@ -305,19 +305,19 @@ export default function TournamentMode() {
                   {/* Onboarding hints */}
                   {phase === 'idle' && !tournamentData && (
                     <div className="flex items-center gap-6 flex-wrap select-none mb-2">
-                      <span className="text-white/50 text-2xl">Drag to pan</span>
-                      <span className="text-white/20 text-2xl">·</span>
-                      <span className="text-white/50 text-2xl">Scroll to zoom</span>
-                      <span className="text-white/20 text-2xl">·</span>
-                      <span className="text-white/50 text-2xl">Click a team to swap it</span>
-                      <span className="text-white/20 text-2xl">·</span>
-                      <span className="text-white/50 text-2xl">Then hit <span className="text-emerald-400 font-bold">Simulate</span></span>
+                      <span className="text-ink/50 text-2xl">Drag to pan</span>
+                      <span className="text-ink/20 text-2xl">·</span>
+                      <span className="text-ink/50 text-2xl">Scroll to zoom</span>
+                      <span className="text-ink/20 text-2xl">·</span>
+                      <span className="text-ink/50 text-2xl">Click a team to swap it</span>
+                      <span className="text-ink/20 text-2xl">·</span>
+                      <span className="text-ink/50 text-2xl">Then hit <span className="text-emerald-400 font-bold">Simulate</span></span>
                     </div>
                   )}
 
                   {/* Group Stage — always shown */}
                   <div>
-                    <p className="text-white/20 text-[10px] tracking-[0.5em] uppercase mb-4">
+                    <p className="text-ink/20 text-[10px] tracking-[0.5em] uppercase mb-4">
                       Group Stage
                     </p>
                     <GroupGrid
@@ -332,7 +332,7 @@ export default function TournamentMode() {
                   {/* Knockout Bracket — appears after group animation */}
                   {showBracket && (
                     <div>
-                      <p className="text-white/20 text-[10px] tracking-[0.5em] uppercase mb-4">
+                      <p className="text-ink/20 text-[10px] tracking-[0.5em] uppercase mb-4">
                         Knockout Stage
                       </p>
                       <Bracket

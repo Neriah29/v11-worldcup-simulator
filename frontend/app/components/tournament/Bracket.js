@@ -79,7 +79,7 @@ const PAIRS = {
   qf_sf:   [{ s1: Y.qf[0], s2: Y.qf[1], d: Y.sf }],
 }
 
-const LINE = 'rgba(255,255,255,0.12)'
+const LINE = 'var(--bracket-line)'
 
 // Connector SVG between two rounds.
 // dir="left"  → sources exit from x=0 (left edge), destination enters at x=W (right edge)
@@ -129,13 +129,13 @@ function TeamRow({ team, score, isWinner }) {
   return (
     <div className={`flex items-center justify-between px-2 py-1.5 gap-2 ${isWinner ? 'bg-emerald-400/10' : ''}`}>
       <span className={`text-[11px] truncate max-w-[90px] font-mono ${
-        isWinner ? 'text-emerald-400 font-bold' : team ? 'text-white/60' : 'text-white/15'
+        isWinner ? 'text-emerald-400 font-bold' : team ? 'text-ink/60' : 'text-ink/15'
       }`}>
         {team || '—'}
       </span>
       {score != null && (
         <span className={`text-[11px] font-bold w-4 text-right flex-shrink-0 ${
-          isWinner ? 'text-emerald-400' : 'text-white/40'
+          isWinner ? 'text-emerald-400' : 'text-ink/40'
         }`}>
           {score}
         </span>
@@ -146,15 +146,15 @@ function TeamRow({ team, score, isWinner }) {
 
 function MatchCard({ match, revealed }) {
   if (!match) {
-    return <div className="w-[140px] h-[56px] border border-white/5 rounded bg-white/[0.01]" />
+    return <div className="w-[140px] h-[56px] border border-ink/5 rounded bg-ink/[0.01]" />
   }
   const { team1, team2, score1, score2, winner } = match
   return (
     <div className={`w-[140px] border rounded overflow-hidden transition-all duration-300 ${
-      revealed ? 'border-white/15 bg-[#0f0f17]' : 'border-white/5 bg-white/[0.01]'
+      revealed ? 'border-ink/15 bg-elevated' : 'border-ink/5 bg-ink/[0.01]'
     }`}>
       <TeamRow team={team1} score={revealed ? score1 : null} isWinner={revealed && winner === team1} />
-      <div className="h-px bg-white/5" />
+      <div className="h-px bg-ink/5" />
       <TeamRow team={team2} score={revealed ? score2 : null} isWinner={revealed && winner === team2} />
     </div>
   )
@@ -167,7 +167,7 @@ function MatchCard({ match, revealed }) {
 function Column({ label, matches, revealed, offset, gap }) {
   return (
     <div className="flex flex-col items-center w-[140px] flex-shrink-0">
-      <p className="text-[9px] tracking-[0.25em] uppercase text-white/20 mb-3 text-center whitespace-nowrap">
+      <p className="text-[9px] tracking-[0.25em] uppercase text-ink/20 mb-3 text-center whitespace-nowrap">
         {label}
       </p>
       <div
@@ -256,7 +256,7 @@ export default function Bracket({ data, revealedRounds }) {
 
       {/* ── Final ── */}
       <div className="flex flex-col items-center w-[140px] flex-shrink-0">
-        <p className="text-[9px] tracking-[0.25em] uppercase text-white/20 mb-3">Final</p>
+        <p className="text-[9px] tracking-[0.25em] uppercase text-ink/20 mb-3">Final</p>
         <div style={{ paddingTop: COLS.final.offset }}>
           <MatchCard
             match={finalRevealed ? finalMatch : null}
@@ -264,7 +264,7 @@ export default function Bracket({ data, revealedRounds }) {
           />
           {finalRevealed && finalMatch?.winner && (
             <div className="mt-5 text-center">
-              <p className="text-white/20 text-[9px] tracking-[0.3em] uppercase mb-1">Champion</p>
+              <p className="text-ink/20 text-[9px] tracking-[0.3em] uppercase mb-1">Champion</p>
               <p className="text-emerald-400 text-xs font-bold tracking-wide leading-tight">
                 {finalMatch.winner}
               </p>

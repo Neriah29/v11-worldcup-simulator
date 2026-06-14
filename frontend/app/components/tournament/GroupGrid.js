@@ -49,15 +49,15 @@ function EditableTeam({ team, allTeams, onSave, onCancel }) {
         value={query}
         onChange={e => setQuery(e.target.value)}
         onKeyDown={handleKey}
-        className="w-[110px] bg-[#0f0f1a] border border-emerald-400/40 rounded px-1.5 py-0.5 text-[11px] text-white font-mono focus:outline-none focus:border-emerald-400"
+        className="w-[110px] bg-elevated border border-emerald-400/40 rounded px-1.5 py-0.5 text-[11px] text-ink font-mono focus:outline-none focus:border-emerald-400"
       />
       {filtered.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-0.5 z-50 bg-[#0f0f1a] border border-white/15 rounded shadow-xl min-w-[140px]">
+        <div className="absolute bottom-full left-0 mb-0.5 z-50 bg-elevated border border-ink/15 rounded shadow-xl min-w-[140px]">
           {filtered.map(t => (
             <button
               key={t}
               onMouseDown={() => onSave(t)}
-              className="w-full text-left px-2.5 py-1.5 text-[11px] text-white/70 hover:text-white hover:bg-white/5 transition-colors font-mono"
+              className="w-full text-left px-2.5 py-1.5 text-[11px] text-ink/70 hover:text-ink hover:bg-ink/5 transition-colors font-mono"
             >
               {t}
             </button>
@@ -102,16 +102,16 @@ function GroupTable({ letter, teams, results, editable, allTeams, onTeamChange }
   }
 
   return (
-    <div className="border border-white/10 rounded-lg overflow-hidden bg-white/[0.03] backdrop-blur-sm hover:border-emerald-400/20 transition-colors duration-300">
-      <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
+    <div className="border border-ink/10 rounded-lg overflow-hidden bg-ink/[0.03] backdrop-blur-sm hover:border-emerald-400/20 transition-colors duration-300">
+      <div className="px-3 py-2 border-b border-ink/10 flex items-center gap-2">
         <span className="text-emerald-400 text-xs font-bold tracking-widest">GROUP {letter}</span>
         {editable && (
-          <span className="ml-auto text-white/15 text-[9px] tracking-widest uppercase">click to edit</span>
+          <span className="ml-auto text-ink/15 text-[9px] tracking-widest uppercase">click to edit</span>
         )}
       </div>
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-white/20 tracking-widest uppercase">
+          <tr className="text-ink/20 tracking-widest uppercase">
             <th className="text-left px-3 py-1.5 font-normal">Team</th>
             <th className="px-1 py-1.5 font-normal w-6">P</th>
             <th className="px-1 py-1.5 font-normal w-6">W</th>
@@ -125,8 +125,8 @@ function GroupTable({ letter, teams, results, editable, allTeams, onTeamChange }
           {standings.map((s, i) => (
             <tr
               key={s.team}
-              className={`border-t border-white/5 ${
-                done && i < 2 ? 'text-white' : 'text-white/50'
+              className={`border-t border-ink/5 ${
+                done && i < 2 ? 'text-ink' : 'text-ink/50'
               }`}
             >
               <td className="px-3 py-1.5">

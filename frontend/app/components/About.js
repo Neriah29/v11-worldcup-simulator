@@ -59,23 +59,23 @@ export default function About() {
 
       {/* Intro */}
       <div>
-        <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-4">About</p>
+        <p className="text-ink/30 text-xs tracking-[0.4em] uppercase mb-4">About</p>
         <h1 className="text-5xl font-bold tracking-tight leading-none mb-6">V11 Prediction Engine</h1>
-        <p className="text-white/50 text-sm leading-relaxed">
+        <p className="text-ink/50 text-sm leading-relaxed">
           A machine learning tournament simulator for FIFA World Cup 2026 made by Neriah Okolo. Seven from-scratch ML models — built in pure NumPy — are trained on 45,000+ international matches dating back to 1872. Each model predicts match outcomes using 21 hand-engineered features covering form, Elo, rankings, head-to-head history, and more.
         </p>
       </div>
 
       {/* Models */}
       <div>
-        <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-8">The Models</p>
+        <p className="text-ink/30 text-xs tracking-[0.4em] uppercase mb-8">The Models</p>
         <div className="space-y-px">
           {MODELS.map((m, i) => (
-            <div key={m.key} className="flex gap-6 py-5 border-b border-white/5 group">
-              <span className="text-white/15 text-xs w-4 flex-shrink-0 pt-0.5">{i + 1}</span>
+            <div key={m.key} className="flex gap-6 py-5 border-b border-ink/5 group">
+              <span className="text-ink/15 text-xs w-4 flex-shrink-0 pt-0.5">{i + 1}</span>
               <div>
-                <p className="text-white text-sm font-bold tracking-wide mb-1.5">{m.label}</p>
-                <p className="text-white/40 text-xs leading-relaxed">{m.description}</p>
+                <p className="text-ink text-sm font-bold tracking-wide mb-1.5">{m.label}</p>
+                <p className="text-ink/40 text-xs leading-relaxed">{m.description}</p>
               </div>
             </div>
           ))}
@@ -84,20 +84,20 @@ export default function About() {
 
       {/* Features */}
       <div>
-        <p className="text-white/30 text-xs tracking-[0.4em] uppercase mb-8">Features <span className="text-white/15 ml-2">21 inputs per match</span></p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-white/5 rounded-lg overflow-hidden">
+        <p className="text-ink/30 text-xs tracking-[0.4em] uppercase mb-8">Features <span className="text-ink/15 ml-2">21 inputs per match</span></p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-ink/5 rounded-lg overflow-hidden">
           {FEATURES.map(f => (
-            <div key={f.label} className="bg-[#0a0a0f] px-5 py-4">
-              <p className="text-white/70 text-xs font-bold mb-1">{f.label}</p>
-              <p className="text-white/30 text-[11px] leading-relaxed">{f.desc}</p>
+            <div key={f.label} className="bg-base px-5 py-4">
+              <p className="text-ink/70 text-xs font-bold mb-1">{f.label}</p>
+              <p className="text-ink/30 text-[11px] leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Footer */}
-      <div className="border-t border-white/5 pt-8">
-        <p className="text-white/20 text-xs leading-relaxed">
+      <div className="border-t border-ink/5 pt-8">
+        <p className="text-ink/20 text-xs leading-relaxed">
           Models learned in CMOR 438 / INDE 577 · Rice University · Made by Neriah Okolo · All models implemented from scratch in NumPy · Training data: international football results 1872–2024
         </p>
       </div>
