@@ -301,14 +301,15 @@ export default function MonteCarlo() {
                   <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        i === 0
-                          ? 'bg-emerald-400'
-                          : isTop3
-                            ? 'bg-emerald-400/60'
-                            : pct === 0
-                              ? 'bg-transparent'
-                              : 'bg-white/20'
+                        pct === 0 ? 'bg-transparent' : ''
                       }`}
+                      style={pct > 0 ? {
+                        background: i === 0
+                          ? 'linear-gradient(to right, rgba(52,211,153,0.5), rgb(52,211,153))'
+                          : isTop3
+                            ? 'linear-gradient(to right, rgba(52,211,153,0.2), rgba(52,211,153,0.6))'
+                            : 'linear-gradient(to right, rgba(255,255,255,0.05), rgba(255,255,255,0.2))'
+                      } : undefined}
                       style={{ width: `${barWidth}%` }}
                     />
                   </div>

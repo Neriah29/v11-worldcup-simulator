@@ -102,7 +102,7 @@ function GroupTable({ letter, teams, results, editable, allTeams, onTeamChange }
   }
 
   return (
-    <div className="border border-white/10 rounded-lg overflow-hidden bg-white/[0.02]">
+    <div className="border border-white/10 rounded-lg overflow-hidden bg-white/[0.03] backdrop-blur-sm hover:border-emerald-400/20 transition-colors duration-300">
       <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2">
         <span className="text-emerald-400 text-xs font-bold tracking-widest">GROUP {letter}</span>
         {editable && (
