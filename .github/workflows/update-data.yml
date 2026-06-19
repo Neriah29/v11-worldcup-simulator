@@ -1,0 +1,53 @@
+name: Update match data
+
+on:
+  schedule:
+    # Runs every day at 06:00 UTC — well after most overnight matches finish
+    - cron: '0 6 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download latest results
+        run: |
+          curl -fsSL \
+            "https://raw.githubusercontent.com/martj42/international-football-results-from-1872-to-2017/master/results.csv" \
+            -o /tmp/results_latest.csv
+
+      - name: Filter to played matches only
+        run: |
+          python3 - <<'EOF'
+          import csv
+
+          with open("/tmp/results_latest.csv", newline="", encoding="utf-8") as fin, \
+               open("app/data/results.csv", "w", newline="", encoding="utf-8") as fout:
+              reader = csv.DictReader(fin)
+              writer = csv.DictWriter(fout, fieldnames=reader.fieldnames)
+              writer.writeheader()
+              kept = 0
+              for row in reader:
+                  if row["home_score"] not in ("", "NA") and row["away_score"] not in ("", "NA"):
+                      writer.writerow(row)
+                      kept += 1
+          print(f"Wrote {kept} played matches.")
+          EOF
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --quiet app/data/results.csv && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push if data changed
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/data/results.csv
+          git commit -m "data: update match results [$(date -u +%Y-%m-%d)]"
+          git push

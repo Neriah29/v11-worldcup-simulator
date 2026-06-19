@@ -27,11 +27,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://v11-worldcup.vercel.app",
-    ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -39,6 +35,10 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {"message": "World Cup Simulator API is running"}
+
+@app.get("/status")
+def status():
+    return {"trained_at": predictor.trained_at}
 
 @app.get("/models")
 def list_models():

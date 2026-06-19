@@ -4,3 +4,6 @@ frontend/node_modules/
 __pycache__/
 *.pyc
 BUILD_CONTEXT.md
+app/data/trained_models.pkl
+.DS_Store
+.claude/

@@ -16,6 +16,28 @@ const TABS = [
   { id: 'about',      label: 'About' },
 ]
 
+function useTrainedAt() {
+  const [trainedAt, setTrainedAt] = useState(null)
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/status`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.trained_at) {
+          const d = new Date(data.trained_at)
+          const formatted = d.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
+          })
+          setTrainedAt(formatted)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  return trainedAt
+}
+
 // API status: 'checking' | 'online' | 'offline' | 'slow'
 function useApiStatus() {
   const [status, setStatus] = useState('checking')
@@ -91,6 +113,7 @@ export default function Home() {
   const apiStatus = useApiStatus()
   const banner = BANNER[apiStatus]
   const { theme, toggle } = useTheme()
+  const trainedAt = useTrainedAt()
 
   return (
     <main className="min-h-screen bg-base text-ink font-mono flex flex-col">
@@ -147,6 +170,9 @@ export default function Home() {
                                        'bg-ink/20 animate-pulse'
           }`} />
           <span className="text-ink/30 text-xs tracking-widest">FIFA WORLD CUP 2026</span>
+          {trainedAt && (
+            <span className="text-ink/20 text-[10px] tracking-wide">· models as of {trainedAt}</span>
+          )}
         </div>
       </header>
 

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pickle
 from pathlib import Path
+from datetime import datetime, timezone
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
@@ -25,6 +26,7 @@ models            = {}
 scaler            = None
 team_latest_stats = {}
 accuracies        = {}  # {model_key: float} populated after training
+trained_at        = None  # ISO-8601 UTC string set when models are trained/loaded
 
 # ─── Tournament importance weights ───────────────────────────────────────────
 # Higher weight = this tournament type carries more signal.
@@ -376,6 +378,8 @@ def _add_ranking_features(df, ranking):
 
 def save(path: Path = MODELS_PATH):
     """Save trained models, scaler, and team stats to disk."""
+    global trained_at
+    trained_at = datetime.now(timezone.utc).isoformat()
     with open(path, "wb") as f:
         pickle.dump({
             "version":           MODELS_VERSION,
@@ -383,13 +387,14 @@ def save(path: Path = MODELS_PATH):
             "scaler":            scaler,
             "team_latest_stats": team_latest_stats,
             "accuracies":        accuracies,
+            "trained_at":        trained_at,
         }, f)
     print(f"Saved to {path}")
 
 
 def load(path: Path = MODELS_PATH) -> bool:
     """Load pre-trained models from disk. Returns True if successful."""
-    global models, scaler, team_latest_stats
+    global models, scaler, team_latest_stats, trained_at
     if not path.exists():
         return False
     with open(path, "rb") as f:
@@ -401,6 +406,7 @@ def load(path: Path = MODELS_PATH) -> bool:
     scaler            = payload["scaler"]
     team_latest_stats = payload["team_latest_stats"]
     accuracies        = payload.get("accuracies", {})
+    trained_at        = payload.get("trained_at")
     print(f"Loaded pre-trained models. {len(team_latest_stats)} teams available.")
     return True
 
@@ -416,6 +422,10 @@ def train():
     df = pd.read_csv(DATA_PATH)
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values('date').reset_index(drop=True)
+    # Drop unplayed fixtures (future matches have NA scores)
+    df = df.dropna(subset=['home_score', 'away_score'])
+    df['home_score'] = df['home_score'].astype(int)
+    df['away_score'] = df['away_score'].astype(int)
     df['home_win'] = (df['home_score'] > df['away_score']).astype(int)
     df['neutral']  = df['neutral'].astype(int)
 
