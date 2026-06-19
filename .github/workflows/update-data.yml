@@ -21,6 +21,7 @@ jobs:
         run: |
           pip install -q kaggle
           kaggle datasets download -d martj42/international-football-results-from-1872-to-2017 -f results.csv -p /tmp --unzip
+          mv /tmp/results.csv /tmp/results_latest.csv
 
       - name: Filter to played matches only
         run: |
