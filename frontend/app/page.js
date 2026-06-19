@@ -91,27 +91,42 @@ function useTheme() {
   return { theme, toggle }
 }
 
-const BANNER = {
-  checking: null,
-  online:   null,
-  slow: {
-    bg:   'bg-yellow-400/10 border-yellow-400/20',
-    dot:  'bg-yellow-400 animate-pulse',
-    text: 'text-yellow-400',
-    msg:  'API is warming up — Railway cold start in progress. This usually takes 20–40 seconds.',
-  },
-  offline: {
-    bg:   'bg-red-400/10 border-red-400/20',
-    dot:  'bg-red-400',
-    text: 'text-red-400',
-    msg:  'API is unreachable. The Railway server may be down or still starting — retrying automatically.',
-  },
+function getBanner(status) {
+  if (status === 'checking' || status === 'online') return null
+
+  const utcHour = new Date().getUTCHours()
+  const utcMin  = new Date().getUTCMinutes()
+  const inRetrainWindow = utcHour === 6 && utcMin <= 45
+
+  if (status === 'slow') {
+    return {
+      bg:   'bg-yellow-400/10 border-yellow-400/20',
+      dot:  'bg-yellow-400 animate-pulse',
+      text: 'text-yellow-400',
+      msg:  inRetrainWindow
+        ? 'Models are retraining on the latest match data — this happens daily at 6:00 AM UTC and takes ~45 minutes. Predictions will be back shortly.'
+        : 'API is warming up — Railway cold start in progress. This usually takes 20–40 seconds.',
+    }
+  }
+
+  if (status === 'offline') {
+    return {
+      bg:   'bg-red-400/10 border-red-400/20',
+      dot:  'bg-red-400 animate-pulse',
+      text: 'text-red-400',
+      msg:  inRetrainWindow
+        ? 'Models are retraining on the latest match data — this happens daily at 6:00 AM UTC and takes ~45 minutes. Check back soon.'
+        : 'API is unreachable. The server may be down or still starting — retrying automatically.',
+    }
+  }
+
+  return null
 }
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('tournament')
   const apiStatus = useApiStatus()
-  const banner = BANNER[apiStatus]
+  const banner = getBanner(apiStatus)
   const { theme, toggle } = useTheme()
   const trainedAt = useTrainedAt()
 
