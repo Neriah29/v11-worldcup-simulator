@@ -140,13 +140,10 @@ export default function TournamentMode() {
     setRevealedRounds({ r32: 0, r16: 0, qf: 0, sf: 0, final: 0 })
 
     try {
+      const params = new URLSearchParams({ model: selectedModel })
+      if (editableGroups) params.set('groups', JSON.stringify(editableGroups))
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tournament/simulate`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: selectedModel, groups: editableGroups || null }),
-        }
+        `${process.env.NEXT_PUBLIC_API_URL}/tournament/simulate?${params}`
       )
       if (!res.ok) {
         const err = await res.json()

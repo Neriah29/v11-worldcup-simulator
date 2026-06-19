@@ -1,17 +1,12 @@
-from fastapi import FastAPI, HTTPException
+import json
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import Optional
 from app import predictor
 from app import tournament as tour
 from app.data.wc2026_groups import GROUPS
-
-
-class SimulateRequest(BaseModel):
-    model: str = "logistic_regression"
-    groups: Optional[dict] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -96,15 +91,24 @@ def tournament_monte_carlo(runs: int = 100, model: str = "logistic_regression"):
 
 
 @app.get("/tournament/simulate")
-def tournament_simulate(model: str = "logistic_regression"):
+def tournament_simulate(
+    model: str = "logistic_regression",
+    groups: Optional[str] = Query(default=None),
+):
     """
-    Simulate the full WC 2026 tournament and return all results in one shot.
-    The frontend uses this data to drive the animated bracket replay.
+    Simulate the full WC 2026 tournament. Optional ?groups=<JSON-encoded dict>
+    for custom group assignments. Accepts GET to avoid CORS preflight.
     """
     if model not in predictor.models:
         raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
+    parsed_groups = None
+    if groups:
+        try:
+            parsed_groups = json.loads(groups)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid groups JSON")
     try:
-        result = tour.simulate_tournament(groups=None, model_key=model)
+        result = tour.simulate_tournament(groups=parsed_groups, model_key=model)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -133,16 +137,3 @@ def elo_rankings():
     return {"teams": ranked}
 
 
-@app.post("/tournament/simulate")
-def tournament_simulate_post(req: SimulateRequest):
-    """
-    Simulate with optional custom group assignments.
-    Body: { "model": str, "groups": { "A": ["Team1", ...], ... } | null }
-    """
-    if req.model not in predictor.models:
-        raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
-    try:
-        result = tour.simulate_tournament(groups=req.groups, model_key=req.model)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
