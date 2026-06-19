@@ -15,9 +15,12 @@ jobs:
         uses: actions/checkout@v4.2.2
 
       - name: Download latest results
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          git clone --depth 1 https://github.com/martj42/international-football-results-from-1872-to-2017.git /tmp/football-data
-          cp /tmp/football-data/results.csv /tmp/results_latest.csv
+          pip install -q kaggle
+          kaggle datasets download -d martj42/international-football-results-from-1872-to-2017 -f results.csv -p /tmp --unzip
 
       - name: Filter to played matches only
         run: |
