@@ -17,7 +17,7 @@ jobs:
       - name: Download latest results
         run: |
           curl -fsSL \
-            "https://raw.githubusercontent.com/martj42/international-football-results-from-1872-to-2017/master/results.csv" \
+            "https://github.com/martj42/international-football-results-from-1872-to-2017/raw/HEAD/results.csv" \
             -o /tmp/results_latest.csv
 
       - name: Filter to played matches only
