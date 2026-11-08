@@ -46,11 +46,21 @@ jobs:
         run: |
           git diff --quiet app/data/results.csv && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
 
+      - name: Retrain models on new data
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          pip install -q -r requirements.txt
+          python3 -c "
+          from app import predictor
+          predictor.train()
+          predictor.save()
+          "
+
       - name: Commit and push if data changed
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/data/results.csv
-          git commit -m "data: update match results [$(date -u +%Y-%m-%d)]"
+          git add app/data/results.csv app/data/trained_models.pkl
+          git commit -m "data: update match results + retrain models [$(date -u +%Y-%m-%d)]"
           git push
