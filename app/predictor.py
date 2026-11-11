@@ -394,7 +394,7 @@ def save(path: Path = MODELS_PATH):
 
 def load(path: Path = MODELS_PATH) -> bool:
     """Load pre-trained models from disk. Returns True if successful."""
-    global models, scaler, team_latest_stats, trained_at
+    global models, scaler, team_latest_stats, accuracies, trained_at
     if not path.exists():
         return False
     with open(path, "rb") as f:
