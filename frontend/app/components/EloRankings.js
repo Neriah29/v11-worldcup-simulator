@@ -40,15 +40,15 @@ export default function EloRankings() {
 
       {/* Title */}
       <div className="mb-12">
-        <p className="text-ink/30 text-xs tracking-[0.4em] uppercase mb-4">Global Rankings</p>
-        <h1 className="text-5xl font-bold tracking-tight leading-none mb-4">Elo Ratings</h1>
-        <p className="text-ink/40 text-sm">Rolling skill ratings updated after every international match since 1872</p>
+        <p className="text-ink/50 text-xs tracking-[0.14em] uppercase mb-4">Global Rankings</p>
+        <h1 className="text-5xl font-semibold tracking-tight leading-none mb-4">Elo Ratings</h1>
+        <p className="text-ink/60 text-sm">Rolling skill ratings updated after every international match since 1872</p>
       </div>
 
       {/* Controls */}
       <div className="flex items-center gap-3 mb-8 flex-wrap">
         {/* Filter toggle */}
-        <div className="flex rounded border border-ink/10 overflow-hidden">
+        <div className="flex rounded-lg border border-ink/10 bg-surface surface overflow-hidden">
           {[
             { key: 'all',     label: 'All nations' },
             { key: 'wc2026', label: 'WC 2026 only' },
@@ -56,10 +56,10 @@ export default function EloRankings() {
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-4 py-2 text-[10px] tracking-widest uppercase transition-all ${
+              className={`px-4 py-2 text-[11px] tracking-wider uppercase transition-all ${
                 filter === f.key
                   ? 'bg-emerald-400/10 text-emerald-400 border-r border-emerald-400/20'
-                  : 'text-ink/30 hover:text-ink/60 border-r border-ink/10 last:border-r-0'
+                  : 'text-ink/50 hover:text-ink/85 hover:bg-ink/[0.03] border-r border-ink/10 last:border-r-0'
               }`}
             >
               {f.label}
@@ -73,11 +73,11 @@ export default function EloRankings() {
           placeholder="Search team..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 min-w-[160px] bg-ink/5 border border-ink/10 rounded px-4 py-2 text-xs text-ink placeholder-ink/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+          className="flex-1 min-w-[160px] bg-surface surface border border-ink/10 rounded-lg px-4 py-2 text-sm text-ink placeholder-ink/40 hover:border-ink/20 focus:outline-none focus:border-emerald-400/50 focus:ring-4 focus:ring-emerald-400/10 transition-all"
         />
 
         {!loading && (
-          <span className="text-ink/20 text-[10px] tracking-widest">
+          <span className="text-ink/40 text-[11px] tracking-wider tabular-nums">
             {filtered.length} teams
           </span>
         )}
@@ -101,14 +101,14 @@ export default function EloRankings() {
               <div
                 key={t.team}
                 className={`flex items-center gap-4 py-2.5 px-3 rounded transition-colors ${
-                  isWC ? 'hover:bg-emerald-400/5' : 'hover:bg-ink/[0.02]'
+                  isWC ? 'hover:bg-emerald-400/[0.06]' : 'hover:bg-ink/[0.03]'
                 }`}
               >
                 {/* Rank */}
-                <span className={`text-[10px] tabular-nums w-7 text-right flex-shrink-0 ${
+                <span className={`text-[11px] font-mono tabular-nums w-7 text-right flex-shrink-0 ${
                   t.rank === 1 ? 'text-emerald-400 font-bold' :
-                  t.rank <= 3  ? 'text-ink/50' :
-                  t.rank <= 10 ? 'text-ink/30' : 'text-ink/15'
+                  t.rank <= 3  ? 'text-ink/65' :
+                  t.rank <= 10 ? 'text-ink/50' : 'text-ink/30'
                 }`}>
                   {t.rank}
                 </span>
@@ -119,10 +119,10 @@ export default function EloRankings() {
                 }`} />
 
                 {/* Team name */}
-                <span className={`text-xs w-36 flex-shrink-0 truncate ${
+                <span className={`text-sm w-40 flex-shrink-0 truncate ${
                   isWC && isTop ? 'text-ink font-bold' :
-                  isWC         ? 'text-ink/70' :
-                  isTop        ? 'text-ink/60' : 'text-ink/30'
+                  isWC         ? 'text-ink/85' :
+                  isTop        ? 'text-ink/75' : 'text-ink/50'
                 }`}>
                   {t.team}
                 </span>
@@ -130,15 +130,15 @@ export default function EloRankings() {
                 {/* Bar */}
                 <div className="flex-1 h-1 bg-ink/5 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${eloColor(t.elo)}`}
+                    className={`h-full rounded-full bar-grow ${eloColor(t.elo)}`}
                     style={{ width: `${bar}%` }}
                   />
                 </div>
 
                 {/* Elo number */}
-                <span className={`text-[10px] tabular-nums w-12 text-right flex-shrink-0 ${
+                <span className={`text-[11px] font-mono tabular-nums w-12 text-right flex-shrink-0 ${
                   t.rank === 1 ? 'text-emerald-400 font-bold' :
-                  isWC        ? 'text-ink/50' : 'text-ink/20'
+                  isWC        ? 'text-ink/65' : 'text-ink/40'
                 }`}>
                   {t.elo.toLocaleString()}
                 </span>
@@ -147,7 +147,7 @@ export default function EloRankings() {
           })}
 
           {filtered.length === 0 && (
-            <p className="text-ink/20 text-xs py-8 text-center tracking-widest">No teams match</p>
+            <p className="text-ink/40 text-xs py-8 text-center tracking-wider">No teams match</p>
           )}
         </div>
       )}
@@ -156,7 +156,7 @@ export default function EloRankings() {
         <div className="mt-10 pt-6 border-t border-ink/5 flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-ink/25 text-[10px] tracking-widest">WC 2026 qualifier</span>
+            <span className="text-ink/45 text-[11px] tracking-wider">WC 2026 qualifier</span>
           </div>
           <div className="flex items-center gap-4 ml-auto">
             {[
@@ -167,7 +167,7 @@ export default function EloRankings() {
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div className={`w-6 h-1 rounded-full ${color}`} />
-                <span className="text-ink/20 text-[9px] tabular-nums">{label}</span>
+                <span className="text-ink/40 text-[10px] tabular-nums">{label}</span>
               </div>
             ))}
           </div>

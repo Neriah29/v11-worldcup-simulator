@@ -49,15 +49,15 @@ function EditableTeam({ team, allTeams, onSave, onCancel }) {
         value={query}
         onChange={e => setQuery(e.target.value)}
         onKeyDown={handleKey}
-        className="w-[110px] bg-elevated border border-emerald-400/40 rounded px-1.5 py-0.5 text-[11px] text-ink font-mono focus:outline-none focus:border-emerald-400"
+        className="w-[110px] bg-elevated border border-emerald-400/40 rounded px-1.5 py-0.5 text-[11px] text-ink  focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/15"
       />
       {filtered.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-0.5 z-50 bg-elevated border border-ink/15 rounded shadow-xl min-w-[140px]">
+        <div className="absolute bottom-full left-0 mb-1 py-1 z-50 bg-elevated border border-ink/15 rounded-md pop rise-in min-w-[140px]">
           {filtered.map(t => (
             <button
               key={t}
               onMouseDown={() => onSave(t)}
-              className="w-full text-left px-2.5 py-1.5 text-[11px] text-ink/70 hover:text-ink hover:bg-ink/5 transition-colors font-mono"
+              className="w-full text-left px-2.5 py-1.5 text-[11px] text-ink/85 hover:text-ink hover:bg-ink/5 transition-colors "
             >
               {t}
             </button>
@@ -102,34 +102,34 @@ function GroupTable({ letter, teams, results, editable, allTeams, onTeamChange }
   }
 
   return (
-    <div className="border border-ink/10 rounded-lg overflow-hidden bg-ink/[0.03] backdrop-blur-sm hover:border-emerald-400/20 transition-colors duration-300">
-      <div className="px-3 py-2 border-b border-ink/10 flex items-center gap-2">
-        <span className="text-emerald-400 text-xs font-bold tracking-widest">GROUP {letter}</span>
+    <div className="border border-ink/10 rounded-xl overflow-hidden bg-surface surface hover:border-emerald-400/25 transition-colors duration-300">
+      <div className="px-4 py-2.5 border-b border-ink/10 flex items-center gap-2">
+        <span className="text-emerald-400 text-sm font-semibold">Group {letter}</span>
         {editable && (
-          <span className="ml-auto text-ink/15 text-[9px] tracking-widest uppercase">click to edit</span>
+          <span className="ml-auto text-ink/30 text-[10px] tracking-wider uppercase">click to edit</span>
         )}
       </div>
-      <table className="w-full text-xs">
+      <table className="w-full text-[13px] tabular-nums">
         <thead>
-          <tr className="text-ink/20 tracking-widest uppercase">
-            <th className="text-left px-3 py-1.5 font-normal">Team</th>
-            <th className="px-1 py-1.5 font-normal w-6">P</th>
-            <th className="px-1 py-1.5 font-normal w-6">W</th>
-            <th className="px-1 py-1.5 font-normal w-6">D</th>
-            <th className="px-1 py-1.5 font-normal w-6">L</th>
-            <th className="px-1 py-1.5 font-normal w-8">GD</th>
-            <th className="px-1 py-1.5 font-normal w-8">Pts</th>
+          <tr className="text-ink/40 tracking-wider uppercase">
+            <th className="text-left px-4 py-1.5 font-medium text-[10px]">Team</th>
+            <th className="px-1 py-1.5 font-medium text-[10px] w-6">P</th>
+            <th className="px-1 py-1.5 font-medium text-[10px] w-6">W</th>
+            <th className="px-1 py-1.5 font-medium text-[10px] w-6">D</th>
+            <th className="px-1 py-1.5 font-medium text-[10px] w-6">L</th>
+            <th className="px-1 py-1.5 font-medium text-[10px] w-8">GD</th>
+            <th className="px-1 py-1.5 font-medium text-[10px] w-8">Pts</th>
           </tr>
         </thead>
         <tbody>
           {standings.map((s, i) => (
             <tr
               key={s.team}
-              className={`border-t border-ink/5 ${
-                done && i < 2 ? 'text-ink' : 'text-ink/50'
+              className={`border-t border-ink/5 hover:bg-ink/[0.03] transition-colors ${
+                done && i < 2 ? 'text-ink font-medium' : 'text-ink/75'
               }`}
             >
-              <td className="px-3 py-1.5">
+              <td className="px-4 py-2">
                 <div className="flex items-center gap-1.5">
                   {done && i < 2 && (
                     <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
@@ -160,12 +160,12 @@ function GroupTable({ letter, teams, results, editable, allTeams, onTeamChange }
                   )}
                 </div>
               </td>
-              <td className="text-center px-1 py-2">{s.played}</td>
-              <td className="text-center px-1 py-2">{s.w}</td>
-              <td className="text-center px-1 py-2">{s.d}</td>
-              <td className="text-center px-1 py-2">{s.l}</td>
-              <td className="text-center px-1 py-2">{s.gd > 0 ? `+${s.gd}` : s.gd}</td>
-              <td className="text-center px-1 py-2 font-bold">{s.pts}</td>
+              <td className="text-center px-1 py-2 font-mono text-xs">{s.played}</td>
+              <td className="text-center px-1 py-2 font-mono text-xs">{s.w}</td>
+              <td className="text-center px-1 py-2 font-mono text-xs">{s.d}</td>
+              <td className="text-center px-1 py-2 font-mono text-xs">{s.l}</td>
+              <td className="text-center px-1 py-2 font-mono text-xs">{s.gd > 0 ? `+${s.gd}` : s.gd}</td>
+              <td className="text-center px-1 py-2 font-mono text-xs font-bold">{s.pts}</td>
             </tr>
           ))}
         </tbody>
@@ -182,7 +182,7 @@ export default function GroupGrid({ groups, groupResults, editable, allTeams, on
   if (!groups) return null
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-[1080px]">
       {GROUP_LETTERS.map(letter => (
         <GroupTable
           key={letter}

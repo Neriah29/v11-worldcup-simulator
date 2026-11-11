@@ -46,7 +46,7 @@ const COLS = {
 // ---------------------------------------------------------------------------
 // Connector geometry
 //
-// LABEL_H: approximate height of the column label element (text-[9px] ≈ 14px
+// LABEL_H: approximate height of the column label element (text-[10px] ≈ 14px
 //          line-height + mb-3 = 12px → 26px total).
 //
 // ctr(offset, gap, i) gives the vertical centre of card i in a column whose
@@ -128,14 +128,14 @@ function buildMatch(raw) {
 function TeamRow({ team, score, isWinner }) {
   return (
     <div className={`flex items-center justify-between px-2 py-1.5 gap-2 ${isWinner ? 'bg-emerald-400/10' : ''}`}>
-      <span className={`text-[11px] truncate max-w-[90px] font-mono ${
-        isWinner ? 'text-emerald-400 font-bold' : team ? 'text-ink/60' : 'text-ink/15'
+      <span className={`text-xs truncate max-w-[95px]  ${
+        isWinner ? 'text-emerald-400 font-bold' : team ? 'text-ink/75' : 'text-ink/30'
       }`}>
         {team || '—'}
       </span>
       {score != null && (
-        <span className={`text-[11px] font-bold w-4 text-right flex-shrink-0 ${
-          isWinner ? 'text-emerald-400' : 'text-ink/40'
+        <span className={`text-[11px] font-mono font-bold w-4 text-right flex-shrink-0 tabular-nums ${
+          isWinner ? 'text-emerald-400' : 'text-ink/60'
         }`}>
           {score}
         </span>
@@ -146,12 +146,12 @@ function TeamRow({ team, score, isWinner }) {
 
 function MatchCard({ match, revealed }) {
   if (!match) {
-    return <div className="w-[140px] h-[56px] border border-ink/5 rounded bg-ink/[0.01]" />
+    return <div className="w-[140px] h-[56px] border border-dashed border-ink/10 rounded-lg" />
   }
   const { team1, team2, score1, score2, winner } = match
   return (
-    <div className={`w-[140px] border rounded overflow-hidden transition-all duration-300 ${
-      revealed ? 'border-ink/15 bg-elevated' : 'border-ink/5 bg-ink/[0.01]'
+    <div className={`w-[140px] border rounded-lg overflow-hidden transition-all duration-300 ${
+      revealed ? 'border-ink/15 bg-elevated surface rise-in' : 'border-ink/5 bg-ink/[0.01]'
     }`}>
       <TeamRow team={team1} score={revealed ? score1 : null} isWinner={revealed && winner === team1} />
       <div className="h-px bg-ink/5" />
@@ -167,7 +167,7 @@ function MatchCard({ match, revealed }) {
 function Column({ label, matches, revealed, offset, gap }) {
   return (
     <div className="flex flex-col items-center w-[140px] flex-shrink-0">
-      <p className="text-[9px] tracking-[0.25em] uppercase text-ink/20 mb-3 text-center whitespace-nowrap">
+      <p className="text-[10px] tracking-[0.1em] uppercase text-ink/40 mb-3 text-center whitespace-nowrap">
         {label}
       </p>
       <div
@@ -256,15 +256,15 @@ export default function Bracket({ data, revealedRounds }) {
 
       {/* ── Final ── */}
       <div className="flex flex-col items-center w-[140px] flex-shrink-0">
-        <p className="text-[9px] tracking-[0.25em] uppercase text-ink/20 mb-3">Final</p>
+        <p className="text-[10px] tracking-[0.1em] uppercase text-ink/40 mb-3">Final</p>
         <div style={{ paddingTop: COLS.final.offset }}>
           <MatchCard
             match={finalRevealed ? finalMatch : null}
             revealed={finalRevealed}
           />
           {finalRevealed && finalMatch?.winner && (
-            <div className="mt-5 text-center">
-              <p className="text-ink/20 text-[9px] tracking-[0.3em] uppercase mb-1">Champion</p>
+            <div className="mt-5 text-center rise-in">
+              <p className="text-ink/40 text-[10px] tracking-[0.14em] uppercase mb-1">Champion</p>
               <p className="text-emerald-400 text-xs font-bold tracking-wide leading-tight">
                 {finalMatch.winner}
               </p>

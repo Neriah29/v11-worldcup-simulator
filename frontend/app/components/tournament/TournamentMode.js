@@ -184,24 +184,24 @@ export default function TournamentMode() {
     <div className="flex flex-col h-full min-h-0">
 
       {/* Controls bar */}
-      <div className="flex-shrink-0 px-8 py-5 border-b border-ink/10 flex items-center gap-6 flex-wrap">
+      <div className="flex-shrink-0 px-8 py-5 border-b border-ink/10 bg-base/40 backdrop-blur-md flex items-center gap-6 flex-wrap">
         <div>
-          <p className="text-ink/30 text-[10px] tracking-[0.4em] uppercase mb-2">Model</p>
+          <p className="text-ink/50 text-[11px] tracking-[0.14em] uppercase mb-2">Model</p>
           <div className="flex gap-1.5 flex-wrap">
             {models.map(m => (
               <button
                 key={m.key}
                 onClick={() => setSelectedModel(m.key)}
                 disabled={phase === 'loading' || phase === 'animating'}
-                className={`px-3 py-1 rounded text-[10px] tracking-wide border transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] border transition-all flex items-center gap-1.5 ${
                   selectedModel === m.key
-                    ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
-                    : 'border-ink/10 text-ink/40 hover:border-ink/20 hover:text-ink/60'
+                    ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10 font-medium'
+                    : 'border-ink/10 bg-surface text-ink/60 hover:border-ink/20 hover:text-ink/85 hover:bg-ink/[0.03] active:scale-[0.98]'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {m.label}
                 {m.accuracy != null && (
-                  <span className={`text-[9px] tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-ink/20'}`}>
+                  <span className={`text-[10px] font-mono tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-ink/40'}`}>
                     {(m.accuracy * 100).toFixed(1)}%
                   </span>
                 )}
@@ -212,17 +212,17 @@ export default function TournamentMode() {
 
         <div className="ml-auto flex items-center gap-3">
           {champion && (
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-emerald-400/30 rounded bg-emerald-400/5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <div className="flex items-center gap-2 px-3 py-1.5 border border-emerald-400/30 rounded-md bg-emerald-400/5 rise-in" style={{ boxShadow: '0 0 24px -8px rgba(52,211,153,0.5)' }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-emerald-400 text-xs font-bold tracking-wide">{champion}</span>
-              <span className="text-ink/20 text-[10px] tracking-widest uppercase">Champion</span>
+              <span className="text-ink/40 text-[11px] tracking-wider uppercase">Champion</span>
             </div>
           )}
 
           {isEdited && phase === 'idle' && (
             <button
               onClick={handleResetGroups}
-              className="px-4 py-2 border border-ink/10 text-ink/30 text-xs tracking-widest uppercase rounded hover:border-ink/20 hover:text-ink/50 transition-all"
+              className="px-4 py-2 border border-ink/10 text-ink/50 text-xs tracking-wider uppercase rounded-md hover:border-ink/20 hover:text-ink/75 hover:bg-ink/[0.03] transition-all"
             >
               Reset Teams
             </button>
@@ -231,7 +231,7 @@ export default function TournamentMode() {
           {(phase === 'done' || phase === 'animating') && (
             <button
               onClick={handleReset}
-              className="px-4 py-2 border border-ink/10 text-ink/40 text-xs tracking-widest uppercase rounded hover:border-ink/20 hover:text-ink/60 transition-all"
+              className="px-4 py-2 border border-ink/10 text-ink/60 text-xs tracking-wider uppercase rounded-md hover:border-ink/20 hover:text-ink/85 hover:bg-ink/[0.03] transition-all"
             >
               Reset
             </button>
@@ -240,7 +240,7 @@ export default function TournamentMode() {
           <button
             onClick={handleSimulate}
             disabled={phase === 'loading' || phase === 'animating'}
-            className="px-6 py-2 bg-emerald-400 text-black font-bold text-xs tracking-[0.2em] uppercase rounded hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-7 py-2.5 bg-emerald-400 text-black font-semibold text-xs tracking-[0.1em] uppercase rounded-xl hover:bg-emerald-300 active:scale-[0.98] accent-glow shadow-[0_8px_24px_-10px_rgba(52,211,153,0.7)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             {phase === 'loading' ? 'Simulating...' : phase === 'animating' ? 'Playing...' : 'Simulate'}
           </button>
@@ -248,20 +248,20 @@ export default function TournamentMode() {
       </div>
 
       {error && (
-        <div className="flex-shrink-0 px-8 py-3 bg-red-400/10 border-b border-red-400/20">
+        <div className="flex-shrink-0 px-8 py-3 bg-red-400/10 border-b border-red-400/20 rise-in">
           <p className="text-red-400 text-xs tracking-wide">{error}</p>
         </div>
       )}
 
       {/* Canvas — always visible */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-canvas relative">
+      <div className="flex-1 min-h-0 overflow-hidden bg-canvas canvas-grid relative">
 
         {/* Loading overlay (sits on top of the canvas) */}
         {phase === 'loading' && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-canvas/80 backdrop-blur-sm">
             <div className="text-center space-y-3">
               <div className="w-6 h-6 border border-emerald-400/40 border-t-emerald-400 rounded-full animate-spin mx-auto" />
-              <p className="text-ink/30 text-xs tracking-widest uppercase">Running simulation...</p>
+              <p className="text-ink/50 text-xs tracking-wider uppercase">Running simulation...</p>
             </div>
           </div>
         )}
@@ -278,18 +278,21 @@ export default function TournamentMode() {
           {({ zoomIn, zoomOut, resetTransform }) => (
             <>
               {/* Zoom controls */}
-              <div className="absolute top-4 right-4 z-10 flex flex-col gap-1">
+              <div className="absolute top-4 right-4 z-10 flex flex-col p-1 gap-0.5 rounded-lg border border-ink/10 bg-elevated/80 backdrop-blur-md pop">
                 <button
                   onClick={() => zoomIn()}
-                  className="w-8 h-8 border border-ink/10 rounded text-ink/40 hover:text-ink/70 hover:border-ink/20 transition-all text-lg leading-none flex items-center justify-center"
+                  aria-label="Zoom in"
+                  className="w-7 h-7 rounded-md text-ink/60 hover:text-ink/90 hover:bg-ink/[0.06] transition-all text-lg leading-none flex items-center justify-center"
                 >+</button>
                 <button
                   onClick={() => zoomOut()}
-                  className="w-8 h-8 border border-ink/10 rounded text-ink/40 hover:text-ink/70 hover:border-ink/20 transition-all text-lg leading-none flex items-center justify-center"
+                  aria-label="Zoom out"
+                  className="w-7 h-7 rounded-md text-ink/60 hover:text-ink/90 hover:bg-ink/[0.06] transition-all text-lg leading-none flex items-center justify-center"
                 >−</button>
                 <button
                   onClick={() => resetTransform()}
-                  className="w-8 h-8 border border-ink/10 rounded text-ink/30 hover:text-ink/60 hover:border-ink/20 transition-all text-[10px] leading-none flex items-center justify-center"
+                  aria-label="Reset view"
+                  className="w-7 h-7 rounded-md text-ink/50 hover:text-ink/90 hover:bg-ink/[0.06] transition-all text-[11px] leading-none flex items-center justify-center"
                 >↺</button>
               </div>
 
@@ -302,19 +305,19 @@ export default function TournamentMode() {
                   {/* Onboarding hints */}
                   {phase === 'idle' && !tournamentData && (
                     <div className="flex items-center gap-6 flex-wrap select-none mb-2">
-                      <span className="text-ink/50 text-2xl">Drag to pan</span>
-                      <span className="text-ink/20 text-2xl">·</span>
-                      <span className="text-ink/50 text-2xl">Scroll to zoom</span>
-                      <span className="text-ink/20 text-2xl">·</span>
-                      <span className="text-ink/50 text-2xl">Click a team to swap it</span>
-                      <span className="text-ink/20 text-2xl">·</span>
-                      <span className="text-ink/50 text-2xl">Then hit <span className="text-emerald-400 font-bold">Simulate</span></span>
+                      <span className="text-ink/65 text-2xl">Drag to pan</span>
+                      <span className="text-ink/40 text-2xl">·</span>
+                      <span className="text-ink/65 text-2xl">Scroll to zoom</span>
+                      <span className="text-ink/40 text-2xl">·</span>
+                      <span className="text-ink/65 text-2xl">Click a team to swap it</span>
+                      <span className="text-ink/40 text-2xl">·</span>
+                      <span className="text-ink/65 text-2xl">Then hit <span className="text-emerald-400 font-bold">Simulate</span></span>
                     </div>
                   )}
 
                   {/* Group Stage — always shown */}
                   <div>
-                    <p className="text-ink/20 text-[10px] tracking-[0.5em] uppercase mb-4">
+                    <p className="text-ink/50 text-xs font-semibold tracking-[0.14em] uppercase mb-4">
                       Group Stage
                     </p>
                     <GroupGrid
@@ -329,7 +332,7 @@ export default function TournamentMode() {
                   {/* Knockout Bracket — appears after group animation */}
                   {showBracket && (
                     <div>
-                      <p className="text-ink/20 text-[10px] tracking-[0.5em] uppercase mb-4">
+                      <p className="text-ink/50 text-xs font-semibold tracking-[0.14em] uppercase mb-4">
                         Knockout Stage
                       </p>
                       <Bracket

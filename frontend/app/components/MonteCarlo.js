@@ -132,9 +132,9 @@ export default function MonteCarlo() {
 
       {/* Title */}
       <div className="mb-12">
-        <p className="text-ink/30 text-xs tracking-[0.4em] uppercase mb-4">Monte Carlo Simulation</p>
-        <h1 className="text-5xl font-bold tracking-tight leading-none mb-4">Who usually wins?</h1>
-        <p className="text-ink/40 text-sm">Run the tournament up to 10,000 times to see probability distributions</p>
+        <p className="text-ink/50 text-xs tracking-[0.14em] uppercase mb-4">Monte Carlo Simulation</p>
+        <h1 className="text-5xl font-semibold tracking-tight leading-none mb-4">Who usually wins?</h1>
+        <p className="text-ink/60 text-sm">Run the tournament up to 10,000 times to see probability distributions</p>
       </div>
 
       {/* Controls */}
@@ -142,7 +142,7 @@ export default function MonteCarlo() {
 
         {/* Run count */}
         <div>
-          <p className="text-ink/30 text-[10px] tracking-[0.4em] uppercase mb-3">Simulations</p>
+          <p className="text-ink/50 text-[11px] tracking-[0.14em] uppercase mb-3">Simulations</p>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Presets */}
             {PRESETS.map(n => (
@@ -150,10 +150,10 @@ export default function MonteCarlo() {
                 key={n}
                 onClick={() => applyPreset(n)}
                 disabled={phase === 'running'}
-                className={`px-3 py-1.5 rounded border text-[10px] tracking-widest transition-all ${
+                className={`px-3 py-1.5 rounded-lg border text-xs font-mono tabular-nums transition-all ${
                   runs === n && inputVal === String(n)
                     ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
-                    : 'border-ink/10 text-ink/40 hover:border-ink/20 hover:text-ink/60'
+                    : 'border-ink/10 bg-surface text-ink/60 hover:border-ink/20 hover:text-ink/85 hover:bg-ink/[0.03] active:scale-[0.98]'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {n.toLocaleString()}
@@ -161,7 +161,7 @@ export default function MonteCarlo() {
             ))}
             {/* Custom input */}
             <div className="flex items-center gap-1.5 ml-1">
-              <span className="text-ink/20 text-[10px] tracking-widest">or</span>
+              <span className="text-ink/40 text-[11px] tracking-wider">or</span>
               <input
                 type="number"
                 min="1"
@@ -169,7 +169,7 @@ export default function MonteCarlo() {
                 value={inputVal}
                 onChange={e => handleRunsInput(e.target.value)}
                 disabled={phase === 'running'}
-                className="w-24 bg-ink/5 border border-ink/10 rounded px-3 py-1.5 text-xs text-ink placeholder-ink/20 focus:outline-none focus:border-emerald-400/50 transition-colors disabled:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-24 bg-surface border border-ink/10 rounded-md px-3 py-1.5 text-xs text-ink tabular-nums placeholder-ink/40 hover:border-ink/20 focus:outline-none focus:border-emerald-400/50 focus:ring-4 focus:ring-emerald-400/10 transition-all disabled:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="custom"
               />
             </div>
@@ -178,22 +178,22 @@ export default function MonteCarlo() {
 
         {/* Model */}
         <div>
-          <p className="text-ink/30 text-[10px] tracking-[0.4em] uppercase mb-3">Model</p>
+          <p className="text-ink/50 text-[11px] tracking-[0.14em] uppercase mb-3">Model</p>
           <div className="flex gap-1.5 flex-wrap">
             {models.map(m => (
               <button
                 key={m.key}
                 onClick={() => setSelectedModel(m.key)}
                 disabled={phase === 'running'}
-                className={`px-3 py-1.5 rounded border text-[10px] tracking-wide transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg border text-xs transition-all flex items-center gap-1.5 ${
                   selectedModel === m.key
                     ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
-                    : 'border-ink/10 text-ink/40 hover:border-ink/20 hover:text-ink/60'
+                    : 'border-ink/10 bg-surface text-ink/60 hover:border-ink/20 hover:text-ink/85 hover:bg-ink/[0.03] active:scale-[0.98]'
                 } disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {m.label}
                 {m.accuracy != null && (
-                  <span className={`text-[9px] tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-ink/20'}`}>
+                  <span className={`text-[10px] font-mono tabular-nums ${selectedModel === m.key ? 'text-emerald-400/70' : 'text-ink/40'}`}>
                     {(m.accuracy * 100).toFixed(1)}%
                   </span>
                 )}
@@ -207,7 +207,7 @@ export default function MonteCarlo() {
           <button
             onClick={handleRun}
             disabled={phase === 'running' || isNaN(runs) || runs < 1}
-            className="flex-1 py-3 bg-emerald-400 text-black font-bold text-sm tracking-widest uppercase rounded hover:bg-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 py-3 bg-emerald-400 text-black font-semibold text-sm tracking-wider uppercase rounded-xl tabular-nums hover:bg-emerald-300 active:scale-[0.995] accent-glow shadow-[0_8px_24px_-10px_rgba(52,211,153,0.7)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
           >
             {phase === 'running'
               ? `${runsDone.toLocaleString()} / ${runs.toLocaleString()} runs...`
@@ -216,7 +216,7 @@ export default function MonteCarlo() {
           {phase === 'running' && (
             <button
               onClick={handleStop}
-              className="px-5 py-3 border border-ink/10 text-ink/40 text-xs tracking-widest uppercase rounded hover:border-ink/20 hover:text-ink/60 transition-all"
+              className="px-5 py-3 border border-ink/10 text-ink/60 text-xs tracking-wider uppercase rounded-md hover:border-ink/20 hover:text-ink/85 hover:bg-ink/[0.03] transition-all"
             >
               Stop
             </button>
@@ -225,9 +225,9 @@ export default function MonteCarlo() {
 
         {/* Progress bar */}
         {phase === 'running' && (
-          <div className="h-px bg-ink/5 rounded-full overflow-hidden -mt-2">
+          <div className="h-0.5 bg-ink/5 rounded-full overflow-hidden -mt-2">
             <div
-              className="h-full bg-emerald-400/50 rounded-full transition-all duration-300"
+              className="h-full bg-emerald-400/70 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress * 100}%` }}
             />
           </div>
@@ -235,7 +235,7 @@ export default function MonteCarlo() {
       </div>
 
       {error && (
-        <div className="mb-6 px-4 py-3 bg-red-400/10 border border-red-400/20 rounded">
+        <div className="mb-6 px-4 py-3 bg-red-400/10 border border-red-400/20 rounded-md rise-in">
           <p className="text-red-400 text-xs tracking-wide">{error}</p>
         </div>
       )}
@@ -246,15 +246,15 @@ export default function MonteCarlo() {
           {/* Summary */}
           <div className="mb-6 pb-6 border-b border-ink/10 flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-ink/20 text-[10px] tracking-[0.4em] uppercase mb-1">Most likely champion</p>
-              <p className="text-emerald-400 text-2xl font-bold tracking-tight">{topTeam?.team}</p>
-              <p className="text-ink/30 text-xs mt-1">
-                wins in <span className="text-ink/50">{topTeam?.champion_pct}%</span> of simulations
-                <span className="text-ink/15 mx-2">·</span>
+              <p className="text-ink/40 text-[11px] tracking-[0.14em] uppercase mb-1">Most likely champion</p>
+              <p className="text-emerald-400 text-3xl font-semibold tracking-tight">{topTeam?.team}</p>
+              <p className="text-ink/50 text-xs mt-1">
+                wins in <span className="text-ink/65">{topTeam?.champion_pct}%</span> of simulations
+                <span className="text-ink/30 mx-2">·</span>
                 {topTeam?.champion_n} / {runsDone.toLocaleString()} runs
               </p>
             </div>
-            <div className="text-right text-ink/20 text-[10px] tracking-widest uppercase leading-relaxed">
+            <div className="text-right text-ink/40 text-[11px] tracking-wider uppercase leading-relaxed">
               <p>{runsDone.toLocaleString()} runs{phase === 'running' ? '…' : ''}</p>
               <p>{models.find(m => m.key === results.model)?.label}</p>
             </div>
@@ -266,10 +266,10 @@ export default function MonteCarlo() {
               <button
                 key={key}
                 onClick={() => setView(key)}
-                className={`px-3 py-1.5 rounded text-[10px] tracking-wide border transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${
                   view === key
                     ? 'border-emerald-400/50 text-emerald-400 bg-emerald-400/10'
-                    : 'border-ink/10 text-ink/30 hover:border-ink/20 hover:text-ink/50'
+                    : 'border-ink/10 text-ink/50 hover:border-ink/20 hover:text-ink/75 hover:bg-ink/[0.03]'
                 }`}
               >
                 {label}
@@ -285,15 +285,15 @@ export default function MonteCarlo() {
               const isTop3 = i < 3
 
               return (
-                <div key={t.team} className="flex items-center gap-3">
-                  <span className={`text-[10px] w-5 text-right flex-shrink-0 ${
-                    i === 0 ? 'text-emerald-400' : 'text-ink/15'
+                <div key={t.team} className="flex items-center gap-3 -mx-2 px-2 py-0.5 rounded hover:bg-ink/[0.03] transition-colors">
+                  <span className={`text-[11px] w-5 text-right flex-shrink-0 tabular-nums ${
+                    i === 0 ? 'text-emerald-400' : 'text-ink/30'
                   }`}>
                     {i + 1}
                   </span>
 
-                  <span className={`text-xs w-36 flex-shrink-0 truncate font-mono ${
-                    isTop3 ? 'text-ink/80' : pct === 0 ? 'text-ink/20' : 'text-ink/50'
+                  <span className={`text-xs w-36 flex-shrink-0 truncate  ${
+                    isTop3 ? 'text-ink/90' : pct === 0 ? 'text-ink/40' : 'text-ink/65'
                   }`}>
                     {t.team}
                   </span>
@@ -313,8 +313,8 @@ export default function MonteCarlo() {
                     />
                   </div>
 
-                  <span className={`text-[10px] w-10 text-right flex-shrink-0 tabular-nums ${
-                    i === 0 ? 'text-emerald-400' : pct === 0 ? 'text-ink/10' : 'text-ink/30'
+                  <span className={`text-[11px] w-10 text-right flex-shrink-0 font-mono tabular-nums ${
+                    i === 0 ? 'text-emerald-400' : pct === 0 ? 'text-ink/25' : 'text-ink/50'
                   }`}>
                     {pct > 0 ? `${pct}%` : '—'}
                   </span>
@@ -323,7 +323,7 @@ export default function MonteCarlo() {
             })}
           </div>
 
-          <p className="mt-8 text-ink/10 text-[10px] tracking-widest uppercase">
+          <p className="mt-8 text-ink/25 text-[11px] tracking-wider uppercase">
             All 48 qualified teams · sorted by {VIEW_LABELS[view].toLowerCase()}
           </p>
         </div>
